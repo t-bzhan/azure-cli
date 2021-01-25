@@ -8,7 +8,8 @@ from knack.util import CLIError
 from azure.cli.core.commands import CliCommandType
 
 from ._client_factory import (cf_cdn, cf_custom_domain, cf_endpoints, cf_profiles, cf_origins, cf_resource_usage,
-                              cf_edge_nodes, cf_waf_policy, cf_waf_rule_set, cf_origin_groups)
+                              cf_edge_nodes, cf_waf_policy, cf_waf_rule_set, cf_origin_groups, cf_afd_endpoints, cf_afd_origin_groups,
+                              cf_afd_origins, cf_afd_routes, cf_afd_rule_sets, cf_afd_rules)
 
 
 def _not_found(message):
@@ -32,8 +33,10 @@ def load_command_table(self, _):
     endpoint_not_found_msg = _not_found_msg.format('Endpoint')
     cd_not_found_msg = _not_found_msg.format('Custom Domain')
     origin_not_found_msg = _not_found_msg.format('Origin')
-    origin_not_found_msg = _not_found_msg.format('Origin Group')
+    origin_group_not_found_msg = _not_found_msg.format('Origin Group')
     waf_policy_not_found_msg = _not_found_msg.format('WAF Policy')
+    route_not_found_msg = _not_found_msg.format('Route')
+    rule_set_not_found_msg = _not_found_msg.format('Rule Set')
 
     cdn_sdk = CliCommandType(
         operations_tmpl='azure.mgmt.cdn#CdnManagementClient.{}',
@@ -67,7 +70,7 @@ def load_command_table(self, _):
     cdn_origin_group_sdk = CliCommandType(
         operations_tmpl='azure.mgmt.cdn.operations#OriginGroupsOperations.{}',
         client_factory=cf_origin_groups,
-        exception_handler=_not_found(origin_not_found_msg)
+        exception_handler=_not_found(origin_group_not_found_msg)
     )
 
     cdn_edge_sdk = CliCommandType(
@@ -84,6 +87,42 @@ def load_command_table(self, _):
         operations_tmpl='azure.mgmt.cdn.operations#PoliciesOperations.{}',
         client_factory=cf_waf_policy,
         exception_handler=_not_found(waf_policy_not_found_msg)
+    )
+
+    cdn_afd_endpoints_sdk = CliCommandType(
+        operations_tmpl='azure.mgmt.cdn.operations#AFDEndpointsOperations.{}',
+        client_factory=cf_afd_endpoints,
+        exception_handler=_not_found(endpoint_not_found_msg)
+    )
+
+    cdn_afd_origin_group_sdk = CliCommandType(
+        operations_tmpl='azure.mgmt.cdn.operations#AFDOriginGroupsOperations.{}',
+        client_factory=cf_afd_origin_groups,
+        exception_handler=_not_found(origin_group_not_found_msg)
+    )
+
+    cdn_afd_origin_sdk = CliCommandType(
+        operations_tmpl='azure.mgmt.cdn.operations#AFDOriginsOperations.{}',
+        client_factory=cf_afd_origins,
+        exception_handler=_not_found(origin_not_found_msg)
+    )
+
+    cdn_afd_route_sdk = CliCommandType(
+        operations_tmpl='azure.mgmt.cdn.operations#RoutesOperations.{}',
+        client_factory=cf_afd_routes,
+        exception_handler=_not_found(route_not_found_msg)
+    )
+
+    cdn_afd_rule_set_sdk = CliCommandType(
+        operations_tmpl='azure.mgmt.cdn.operations#RuleSetsOperations.{}',
+        client_factory=cf_afd_rule_sets,
+        exception_handler=_not_found(rule_set_not_found_msg)
+    )
+
+    cdn_afd_rule_sdk = CliCommandType(
+        operations_tmpl='azure.mgmt.cdn.operations#RulesOperations.{}',
+        client_factory=cf_afd_rules,
+        exception_handler=_not_found(rule_set_not_found_msg)
     )
 
     with self.command_group('cdn', cdn_sdk) as g:
@@ -207,3 +246,51 @@ def load_command_table(self, _):
         g.custom_command('delete', 'delete_waf_rate_limit_rule', client_factory=cf_waf_policy, confirmation=True)
         g.custom_command('list', 'list_waf_rate_limit_rules', client_factory=cf_waf_policy)
         g.custom_show_command('show', 'show_waf_rate_limit_rule', client_factory=cf_waf_policy)
+
+    with self.command_group('cdn afd-endpoint', cdn_afd_endpoints_sdk, is_preview=True) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_profile')
+        g.command('purge', 'purge_content', supports_no_wait=True)
+        g.command('validate-custom-domain', 'validate_custom_domain')
+        g.custom_command('create', 'create_afd_endpoint', client_factory=cf_cdn,
+                         doc_string_source='azure.mgmt.cdn.models#AFDEndpoint',
+                         supports_no_wait=True)
+        g.generic_update_command('update', setter_name='update', setter_arg_name='endpoint_update_properties',
+                                 custom_func_name='update_endpoint',
+                                 doc_string_source='azure.mgmt.cdn.models#AFDEndpointUpdateParameters',
+                                 supports_no_wait=True)
+
+    with self.command_group('cdn afd-origin-group', cdn_afd_origin_group_sdk, is_preview=True) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_profile')
+        g.custom_command('create', 'create_afd_origin_group', client_factory=cf_afd_origin_groups)
+        #g.custom_command('update', 'update_origin_group', client_factory=cf_afd_origin_groups)
+        #g.command('delete', 'delete', confirmation=True)
+
+    with self.command_group('cdn afd-origin', cdn_afd_origin_sdk) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_origin_group')
+        g.custom_command('create', 'create_afd_origin', client_factory=cf_afd_origins, is_preview=True)
+        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
+        g.command('delete', 'delete', confirmation=True)
+
+    with self.command_group('cdn afd-route', cdn_afd_route_sdk) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_endpoint')
+        g.custom_command('create', 'create_afd_route', client_factory=cf_afd_routes, is_preview=True)
+        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
+        g.command('delete', 'delete', confirmation=True)
+
+    with self.command_group('cdn afd-rule-set', cdn_afd_rule_set_sdk) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_profile')
+        g.custom_command('create', 'create_afd_rule_set', client_factory=cf_afd_rule_sets, is_preview=True)
+        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
+        g.command('delete', 'delete', confirmation=True)
+
+    with self.command_group('cdn afd-rule', cdn_afd_rule_sdk) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_rule_set')
+        g.custom_command('create', 'create_afd_rule', client_factory=cf_afd_rules, is_preview=True)
+        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
+        g.command('delete', 'delete', confirmation=True)

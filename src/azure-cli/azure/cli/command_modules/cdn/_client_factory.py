@@ -44,3 +44,21 @@ def cf_waf_policy(cli_ctx, _):
 
 def cf_waf_rule_set(cli_ctx, _):
     return cf_cdn(cli_ctx).managed_rule_sets
+
+def cf_afd_endpoints(cli_ctx, _):
+    return cf_cdn(cli_ctx).afd_endpoints
+
+def cf_afd_origin_groups(cli_ctx, _):
+    return cf_cdn(cli_ctx).afd_origin_groups
+
+def cf_afd_origins(cli_ctx, _):
+    return cf_cdn(cli_ctx).afd_origins
+
+def cf_afd_routes(cli_ctx, _):
+    return cf_cdn(cli_ctx).routes
+
+def cf_afd_rule_sets(cli_ctx, _):
+    return cf_cdn(cli_ctx).rule_sets
+
+def cf_afd_rules(cli_ctx, _):
+    return cf_cdn(cli_ctx).rules

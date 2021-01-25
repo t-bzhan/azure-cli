@@ -4,7 +4,7 @@
 # --------------------------------------------------------------------------------------------
 from knack.arguments import CLIArgumentType
 
-from azure.mgmt.cdn.models import QueryStringCachingBehavior, SkuName, ActionType
+from azure.mgmt.cdn.models import QueryStringCachingBehavior, SkuName, ActionType, EnabledState, HttpsRedirect, HealthProbeRequestType, ProbeProtocol, AFDEndpointProtocols, ForwardingProtocol, LinkToDefaultDomain
 
 from azure.cli.core.commands.parameters import get_three_state_flag, tags_type, get_enum_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
@@ -18,6 +18,7 @@ def load_arguments(self, _):
 
     name_arg_type = CLIArgumentType(options_list=('--name', '-n'), metavar='NAME')
     endpoint_name_type = CLIArgumentType(options_list=('--endpoint-name'), metavar='ENDPOINT_NAME')
+    origin_group_name_type = CLIArgumentType(options_list=('--origin-group-name'), metavar='ORIGIN_GROUP_NAME')
     profile_name_help = 'Name of the CDN profile which is unique within the resource group.'
 
     with self.argument_context('cdn') as c:
@@ -262,3 +263,91 @@ def load_arguments(self, _):
         c.argument('action', arg_type=get_enum_type([item.value for item in list(ActionType)]))
         c.argument('request_threshold', type=int)
         c.argument('duration', type=int)
+
+    # AFD endpoint #
+
+    with self.argument_context('cdn afd-endpoint') as c:
+        c.argument('origin_response_timeout_seconds', type=int,
+                    options_list=["--origin-response-timeout-seconds"],
+                    help="Send and receive timeout on forwarding request to the origin. When timeout is reached, the request fails and returns.")
+        c.argument('profile_name', help=profile_name_help, id_part='name')
+        c.argument('enabled_state', arg_type=get_enum_type([item.value for item in list(EnabledState)]), options_list=["--enabled-state"],
+                   help="Whether to enable this endpoint.")
+        c.argument('endpoint_name', name_arg_type, id_part='child_name_1', help='Name of the endpoint under the profile which is unique globally.')
+        c.argument('location', validator=get_default_location_from_resource_group)
+        c.argument('content_paths', nargs='+')
+        c.argument('domains', nargs='+')
+
+    with self.argument_context('cdn afd-endpoint create') as c:
+        c.argument('name', name_arg_type, help='Name of the endpoint under the profile which is unique globally.')
+
+    with self.argument_context('cdn afd-origin-group') as c:
+        c.argument('name', name_arg_type, id_part='child_name_1', help='Name of the origin group.')
+        c.argument('origin_group_name', name_arg_type, id_part='child_name_1', help='Name of the origin group.')
+        c.argument('profile_name', help=profile_name_help, id_part='name')
+
+        # health probe related paramters
+        c.argument('probe_request_type', arg_type=get_enum_type([item.value for item in list(HealthProbeRequestType)]))
+        c.argument('probe_protocol', arg_type=get_enum_type([item.value for item in list(ProbeProtocol)]))
+        c.argument('probe_interval_in_seconds', type=int)
+        c.argument('probe_path', help="The path relative to the origin that is used to determine the health of the origin.")
+
+        # load balancing related parameters
+        c.argument('load_balancing_sample_size', type=int, help="The number of samples to consider for load balancing decisions.")
+        c.argument('load_balancing_successful_samples_required', type=int, help="The number of samples within the sample period that must succeed.")
+        c.argument('load_balancing_additional_latency_in_milliseconds', type=int, help="The additional latency in milliseconds for probes to fall into the lowest latency bucket.")
+
+
+    # AFD Origin #
+    with self.argument_context('cdn afd-origin') as c:
+        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the origin.')
+        c.argument('origin_name', name_arg_type, id_part='child_name_2', help='Name of the origin.')
+        c.argument('profile_name', help=profile_name_help, id_part='name')
+        c.argument('origin_group_name', origin_group_name_type, id_part='child_name_1', help='Name of the origin group which is unique within the endpoint.')
+        c.argument('http_port', type=int)
+        c.argument('https_port', type=int)
+        c.argument('enabled_state', arg_type=get_enum_type([item.value for item in list(EnabledState)]))
+        c.argument('priority', type=int)
+        c.argument('weight', type=int)
+
+    with self.argument_context('cdn afd-origin list') as c:
+        c.argument('profile_name', id_part=None)
+        c.argument('origin_group_name', id_part=None)
+
+
+    # AFD Route #
+    with self.argument_context('cdn afd-route') as c:
+        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the route.')
+        c.argument('route_name', name_arg_type, id_part='child_name_2', help='Name of the route.')
+        c.argument('profile_name', help=profile_name_help, id_part='name')
+        c.argument('endpoint_name', endpoint_name_type, id_part='child_name_1')
+        c.argument('patterns_to_match', nargs='+')
+        c.argument('supported_protocols', nargs='+', arg_type=get_enum_type([item.value for item in list(AFDEndpointProtocols)]))
+        c.argument('link_to_default_domain', arg_type=get_enum_type([item.value for item in list(LinkToDefaultDomain)]))
+        c.argument('forwarding_protocol', arg_type=get_enum_type([item.value for item in list(ForwardingProtocol)]))
+        c.argument('https_redirect', arg_type=get_enum_type([item.value for item in list(HttpsRedirect)]))
+        c.argument('rule_sets', nargs='+')
+
+    with self.argument_context('cdn afd-route list') as c:
+        c.argument('profile_name', id_part=None)
+        c.argument('endpoint_name', id_part=None)
+
+    # AFD RuleSets #
+    with self.argument_context('cdn afd-rule-set') as c:
+        c.argument('name', name_arg_type, id_part='child_name_1', help='Name of the rule set.')
+        c.argument('rule_set_name', name_arg_type, id_part='child_name_1', help='Name of the rule set.')
+        c.argument('profile_name', help=profile_name_help, id_part='name')
+
+    with self.argument_context('cdn afd-rule-set list') as c:
+        c.argument('profile_name', id_part=None)
+
+    # AFD RuleSets #
+    with self.argument_context('cdn afd-rule') as c:
+        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the rule.')
+        c.argument('rule_name', name_arg_type, id_part='child_name_2', help='Name of the rule.')
+        c.argument('profile_name', help=profile_name_help, id_part='name')
+        c.argument('rule_set_name', id_part='child_name_1', help='Name of the rule set.')
+
+    with self.argument_context('cdn afd-rule-set list') as c:
+        c.argument('profile_name', id_part=None)
+        c.argument('rule_set_name', id_part=None)
