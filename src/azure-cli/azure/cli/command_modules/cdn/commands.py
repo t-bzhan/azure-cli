@@ -264,21 +264,21 @@ def load_command_table(self, _):
         g.show_command('show', 'get')
         g.command('list', 'list_by_profile')
         g.custom_command('create', 'create_afd_origin_group', client_factory=cf_afd_origin_groups)
-        #g.custom_command('update', 'update_origin_group', client_factory=cf_afd_origin_groups)
+        g.custom_command('update', 'update_afd_origin_group', client_factory=cf_afd_origin_groups)
         #g.command('delete', 'delete', confirmation=True)
 
     with self.command_group('cdn afd-origin', cdn_afd_origin_sdk) as g:
         g.show_command('show', 'get')
         g.command('list', 'list_by_origin_group')
         g.custom_command('create', 'create_afd_origin', client_factory=cf_afd_origins, is_preview=True)
-        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
+        g.custom_command('update', 'update_afd_origin', client_factory=cf_afd_origins)
         g.command('delete', 'delete', confirmation=True)
 
     with self.command_group('cdn afd-route', cdn_afd_route_sdk) as g:
         g.show_command('show', 'get')
         g.command('list', 'list_by_endpoint')
         g.custom_command('create', 'create_afd_route', client_factory=cf_afd_routes, is_preview=True)
-        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
+        g.custom_command('update', 'update_afd_route', client_factory=cf_afd_routes)
         g.command('delete', 'delete', confirmation=True)
 
     with self.command_group('cdn afd-rule-set', cdn_afd_rule_set_sdk) as g:

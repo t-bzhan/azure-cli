@@ -4,7 +4,8 @@
 # --------------------------------------------------------------------------------------------
 from knack.arguments import CLIArgumentType
 
-from azure.mgmt.cdn.models import QueryStringCachingBehavior, SkuName, ActionType, EnabledState, HttpsRedirect, HealthProbeRequestType, ProbeProtocol, AFDEndpointProtocols, ForwardingProtocol, LinkToDefaultDomain
+from azure.mgmt.cdn.models import (QueryStringCachingBehavior, SkuName, ActionType, EnabledState, HttpsRedirect, HealthProbeRequestType, ProbeProtocol,
+                                   AFDEndpointProtocols, ForwardingProtocol, LinkToDefaultDomain, DeliveryRuleCondition, DeliveryRuleAction)
 
 from azure.cli.core.commands.parameters import get_three_state_flag, tags_type, get_enum_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
@@ -19,6 +20,10 @@ def load_arguments(self, _):
     name_arg_type = CLIArgumentType(options_list=('--name', '-n'), metavar='NAME')
     endpoint_name_type = CLIArgumentType(options_list=('--endpoint-name'), metavar='ENDPOINT_NAME')
     origin_group_name_type = CLIArgumentType(options_list=('--origin-group-name'), metavar='ORIGIN_GROUP_NAME')
+    rule_set_name_type = CLIArgumentType(options_list=('--rule-set-name'), metavar='RULE_SET_NAME')
+    route_name_type = CLIArgumentType(options_list=('--route-name'), metavar='ROUTE_NAME')
+    rule_name_type = CLIArgumentType(options_list=('--rule-name'), metavar='RULE_NAME')
+    origin_name_type = CLIArgumentType(options_list=('--origin-name'), metavar='ORIGIN_NAME')
     profile_name_help = 'Name of the CDN profile which is unique within the resource group.'
 
     with self.argument_context('cdn') as c:
@@ -67,58 +72,7 @@ def load_arguments(self, _):
         c.argument('content_types_to_compress', nargs='+')
 
     with self.argument_context('cdn endpoint rule') as c:
-        c.argument('rule_name', help='Name of the rule.')
-        c.argument('order', help='The order of the rule. The order number must start from 0 and consecutive.\
-                    Rule with higher order will be applied later.')
-        c.argument('match_variable', arg_group="Match Condition", help='Name of the match condition.')
-        c.argument('operator', arg_group="Match Condition", help='Operator of the match condition.')
-        c.argument('selector', arg_group="Match Condition", help='Selector of the match condition.')
-        c.argument('match_values', arg_group="Match Condition", nargs='+',
-                   help='Match values of the match condition (comma separated).')
-        c.argument('transform', arg_group="Match Condition", arg_type=get_enum_type(['Lowercase', 'Uppercase']),
-                   nargs='+', help='Transform to apply before matching.')
-        c.argument('negate_condition', arg_group="Match Condition", arg_type=get_three_state_flag(),
-                   help='If true, negates the condition')
-        c.argument('action_name', arg_group="Action", help='Name of the action.')
-        c.argument('cache_behavior', arg_group="Action",
-                   arg_type=get_enum_type(['BypassCache', 'Override', 'SetIfMissing']),
-                   help='Caching behavior for the requests.')
-        c.argument('cache_duration', arg_group="Action",
-                   help='The duration for which the content needs to be cached. \
-                   Allowed format is [d.]hh:mm:ss.')
-        c.argument('header_action', arg_group="Action",
-                   arg_type=get_enum_type(['Append', 'Overwrite', 'Delete']),
-                   help='Header action for the requests.')
-        c.argument('header_name', arg_group="Action", help='Name of the header to modify.')
-        c.argument('header_value', arg_group="Action", help='Value of the header.')
-        c.argument('redirect_type', arg_group="Action",
-                   arg_type=get_enum_type(['Moved', 'Found', 'TemporaryRedirect', 'PermanentRedirect']),
-                   help='The redirect type the rule will use when redirecting traffic.')
-        c.argument('redirect_protocol', arg_group="Action",
-                   arg_type=get_enum_type(['MatchRequest', 'Http', 'Https']),
-                   help='Protocol to use for the redirect.')
-        c.argument('custom_hostname', arg_group="Action", help='Host to redirect. \
-                   Leave empty to use the incoming host as the destination host.')
-        c.argument('custom_path', arg_group="Action",
-                   help='The full path to redirect. Path cannot be empty and must start with /. \
-                   Leave empty to use the incoming path as destination path.')
-        c.argument('custom_querystring', arg_group="Action",
-                   help='The set of query strings to be placed in the redirect URL. \
-                   leave empty to preserve the incoming query string.')
-        c.argument('custom_fragment', arg_group="Action", help='Fragment to add to the redirect URL.')
-        c.argument('query_string_behavior', arg_group="Action",
-                   arg_type=get_enum_type(['Include', 'IncludeAll', 'Exclude', 'ExcludeAll']),
-                   help='Query string behavior for the requests.')
-        c.argument('query_parameters', arg_group="Action",
-                   help='Query parameters to include or exclude (comma separated).')
-        c.argument('source_pattern', arg_group="Action",
-                   help='A request URI pattern that identifies the type of requests that may be rewritten.')
-        c.argument('destination', help='The destination path to be used in the rewrite.')
-        c.argument('preserve_unmatched_path', arg_group="Action",
-                   arg_type=get_three_state_flag(),
-                   help='If True, the remaining path after the source \
-                   pattern will be appended to the new destination path.')
-        c.argument('index', type=int, help='The index of the condition/action')
+        configure_rule_parameters(c)
 
     with self.argument_context('cdn endpoint create') as c:
         c.argument('name', name_arg_type, id_part='name', help='Name of the CDN endpoint.')
@@ -273,7 +227,7 @@ def load_arguments(self, _):
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('enabled_state', arg_type=get_enum_type([item.value for item in list(EnabledState)]), options_list=["--enabled-state"],
                    help="Whether to enable this endpoint.")
-        c.argument('endpoint_name', name_arg_type, id_part='child_name_1', help='Name of the endpoint under the profile which is unique globally.')
+        c.argument('endpoint_name', endpoint_name_type, id_part='child_name_1', help='Name of the endpoint under the profile which is unique globally.')
         c.argument('location', validator=get_default_location_from_resource_group)
         c.argument('content_paths', nargs='+')
         c.argument('domains', nargs='+')
@@ -283,7 +237,7 @@ def load_arguments(self, _):
 
     with self.argument_context('cdn afd-origin-group') as c:
         c.argument('name', name_arg_type, id_part='child_name_1', help='Name of the origin group.')
-        c.argument('origin_group_name', name_arg_type, id_part='child_name_1', help='Name of the origin group.')
+        c.argument('origin_group_name', origin_group_name_type, id_part='child_name_1', help='Name of the origin group.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
 
         # health probe related paramters
@@ -301,7 +255,7 @@ def load_arguments(self, _):
     # AFD Origin #
     with self.argument_context('cdn afd-origin') as c:
         c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the origin.')
-        c.argument('origin_name', name_arg_type, id_part='child_name_2', help='Name of the origin.')
+        c.argument('origin_name', origin_name_type, id_part='child_name_2', help='Name of the origin.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('origin_group_name', origin_group_name_type, id_part='child_name_1', help='Name of the origin group which is unique within the endpoint.')
         c.argument('http_port', type=int)
@@ -318,15 +272,16 @@ def load_arguments(self, _):
     # AFD Route #
     with self.argument_context('cdn afd-route') as c:
         c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the route.')
-        c.argument('route_name', name_arg_type, id_part='child_name_2', help='Name of the route.')
+        c.argument('route_name', route_name_type, id_part='child_name_2', help='Name of the route.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('endpoint_name', endpoint_name_type, id_part='child_name_1')
-        c.argument('patterns_to_match', nargs='+')
-        c.argument('supported_protocols', nargs='+', arg_type=get_enum_type([item.value for item in list(AFDEndpointProtocols)]))
-        c.argument('link_to_default_domain', arg_type=get_enum_type([item.value for item in list(LinkToDefaultDomain)]))
-        c.argument('forwarding_protocol', arg_type=get_enum_type([item.value for item in list(ForwardingProtocol)]))
-        c.argument('https_redirect', arg_type=get_enum_type([item.value for item in list(HttpsRedirect)]))
-        c.argument('rule_sets', nargs='+')
+        c.argument('patterns_to_match', nargs='+', help='The route patterns of the rule.')
+        c.argument('supported_protocols', nargs='+', arg_type=get_enum_type([item.value for item in list(AFDEndpointProtocols)]), help="List of supported protocols for this route.")
+        c.argument('link_to_default_domain', arg_type=get_enum_type([item.value for item in list(LinkToDefaultDomain)]), help="Whether this route will be linked to the default endpoint domain.")
+        c.argument('forwarding_protocol', arg_type=get_enum_type([item.value for item in list(ForwardingProtocol)]), help="Protocol this rule will use when forwarding traffic to backends.")
+        c.argument('https_redirect', arg_type=get_enum_type([item.value for item in list(HttpsRedirect)]), 
+                    help="Whether to automatically redirect HTTP traffic to HTTPS traffic. Note that this is a easy way to set up this rule and it will be the first rule that gets executed.")
+        c.argument('rule_sets', nargs='+', help='rule sets referenced by this endpoint.')
 
     with self.argument_context('cdn afd-route list') as c:
         c.argument('profile_name', id_part=None)
@@ -335,19 +290,72 @@ def load_arguments(self, _):
     # AFD RuleSets #
     with self.argument_context('cdn afd-rule-set') as c:
         c.argument('name', name_arg_type, id_part='child_name_1', help='Name of the rule set.')
-        c.argument('rule_set_name', name_arg_type, id_part='child_name_1', help='Name of the rule set.')
+        c.argument('rule_set_name', rule_set_name_type, id_part='child_name_1', help='Name of the rule set.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
 
     with self.argument_context('cdn afd-rule-set list') as c:
         c.argument('profile_name', id_part=None)
 
-    # AFD RuleSets #
+    # AFD Rules #
     with self.argument_context('cdn afd-rule') as c:
-        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the rule.')
-        c.argument('rule_name', name_arg_type, id_part='child_name_2', help='Name of the rule.')
+        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the rule.')        
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('rule_set_name', id_part='child_name_1', help='Name of the rule set.')
+        configure_rule_parameters(c)
+        c.argument('rule_name', rule_name_type, id_part='child_name_2', help='Name of the rule.')        
 
-    with self.argument_context('cdn afd-rule-set list') as c:
-        c.argument('profile_name', id_part=None)
-        c.argument('rule_set_name', id_part=None)
+def configure_rule_parameters(c):
+        c.argument('rule_name', help='Name of the rule.')
+        c.argument('order', help='The order of the rule. The order number must start from 0 and consecutive.\
+                    Rule with higher order will be applied later.')
+        c.argument('match_variable', arg_group="Match Condition", help='Name of the match condition.',
+                    arg_type=get_enum_type(DeliveryRuleCondition._subtype_map["name"].keys()))
+        c.argument('operator', arg_group="Match Condition", help='Operator of the match condition.')
+        c.argument('selector', arg_group="Match Condition", help='Selector of the match condition.')
+        c.argument('match_values', arg_group="Match Condition", nargs='+',
+                   help='Match values of the match condition (comma separated).')
+        c.argument('transform', arg_group="Match Condition", arg_type=get_enum_type(['Lowercase', 'Uppercase']),
+                   nargs='+', help='Transform to apply before matching.')
+        c.argument('negate_condition', arg_group="Match Condition", arg_type=get_three_state_flag(),
+                   help='If true, negates the condition')
+        c.argument('action_name', arg_group="Action", help='Name of the action.',
+                    arg_type=get_enum_type(DeliveryRuleAction._subtype_map["name"].keys()))
+        c.argument('cache_behavior', arg_group="Action",
+                   arg_type=get_enum_type(['BypassCache', 'Override', 'SetIfMissing']),
+                   help='Caching behavior for the requests.')
+        c.argument('cache_duration', arg_group="Action",
+                   help='The duration for which the content needs to be cached. \
+                   Allowed format is [d.]hh:mm:ss.')
+        c.argument('header_action', arg_group="Action",
+                   arg_type=get_enum_type(['Append', 'Overwrite', 'Delete']),
+                   help='Header action for the requests.')
+        c.argument('header_name', arg_group="Action", help='Name of the header to modify.')
+        c.argument('header_value', arg_group="Action", help='Value of the header.')
+        c.argument('redirect_type', arg_group="Action",
+                   arg_type=get_enum_type(['Moved', 'Found', 'TemporaryRedirect', 'PermanentRedirect']),
+                   help='The redirect type the rule will use when redirecting traffic.')
+        c.argument('redirect_protocol', arg_group="Action",
+                   arg_type=get_enum_type(['MatchRequest', 'Http', 'Https']),
+                   help='Protocol to use for the redirect.')
+        c.argument('custom_hostname', arg_group="Action", help='Host to redirect. \
+                   Leave empty to use the incoming host as the destination host.')
+        c.argument('custom_path', arg_group="Action",
+                   help='The full path to redirect. Path cannot be empty and must start with /. \
+                   Leave empty to use the incoming path as destination path.')
+        c.argument('custom_querystring', arg_group="Action",
+                   help='The set of query strings to be placed in the redirect URL. \
+                   leave empty to preserve the incoming query string.')
+        c.argument('custom_fragment', arg_group="Action", help='Fragment to add to the redirect URL.')
+        c.argument('query_string_behavior', arg_group="Action",
+                   arg_type=get_enum_type(['Include', 'IncludeAll', 'Exclude', 'ExcludeAll']),
+                   help='Query string behavior for the requests.')
+        c.argument('query_parameters', arg_group="Action",
+                   help='Query parameters to include or exclude (comma separated).')
+        c.argument('source_pattern', arg_group="Action",
+                   help='A request URI pattern that identifies the type of requests that may be rewritten.')
+        c.argument('destination', help='The destination path to be used in the rewrite.')
+        c.argument('preserve_unmatched_path', arg_group="Action",
+                   arg_type=get_three_state_flag(),
+                   help='If True, the remaining path after the source \
+                   pattern will be appended to the new destination path.')
+        c.argument('index', type=int, help='The index of the condition/action')
