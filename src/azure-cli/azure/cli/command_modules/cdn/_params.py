@@ -232,11 +232,7 @@ def load_arguments(self, _):
         c.argument('content_paths', nargs='+')
         c.argument('domains', nargs='+')
 
-    with self.argument_context('cdn afd-endpoint create') as c:
-        c.argument('name', name_arg_type, help='Name of the endpoint under the profile which is unique globally.')
-
     with self.argument_context('cdn afd-origin-group') as c:
-        c.argument('name', name_arg_type, id_part='child_name_1', help='Name of the origin group.')
         c.argument('origin_group_name', origin_group_name_type, id_part='child_name_1', help='Name of the origin group.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
 
@@ -254,7 +250,6 @@ def load_arguments(self, _):
 
     # AFD Origin #
     with self.argument_context('cdn afd-origin') as c:
-        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the origin.')
         c.argument('origin_name', origin_name_type, id_part='child_name_2', help='Name of the origin.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('origin_group_name', origin_group_name_type, id_part='child_name_1', help='Name of the origin group which is unique within the endpoint.')
@@ -263,15 +258,14 @@ def load_arguments(self, _):
         c.argument('enabled_state', arg_type=get_enum_type([item.value for item in list(EnabledState)]))
         c.argument('priority', type=int)
         c.argument('weight', type=int)
+        c.argument('enable_private_link', arg_type=get_three_state_flag(invert=False), help='Indicates whether private link is enanbled on that origin.')
 
     with self.argument_context('cdn afd-origin list') as c:
         c.argument('profile_name', id_part=None)
         c.argument('origin_group_name', id_part=None)
 
-
     # AFD Route #
     with self.argument_context('cdn afd-route') as c:
-        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the route.')
         c.argument('route_name', route_name_type, id_part='child_name_2', help='Name of the route.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('endpoint_name', endpoint_name_type, id_part='child_name_1')
@@ -282,6 +276,12 @@ def load_arguments(self, _):
         c.argument('https_redirect', arg_type=get_enum_type([item.value for item in list(HttpsRedirect)]), 
                     help="Whether to automatically redirect HTTP traffic to HTTPS traffic. Note that this is a easy way to set up this rule and it will be the first rule that gets executed.")
         c.argument('rule_sets', nargs='+', help='rule sets referenced by this endpoint.')
+        c.argument('content_types_to_compress', nargs='+', help='List of content types on which compression applies. The value should be a valid MIME type.')
+        c.argument('query_string_caching_behavior', arg_type=get_enum_type([item.value for item in list(QueryStringCachingBehavior)]))
+        c.argument('is_compression_enabled', arg_type=get_three_state_flag(), options_list='--enable-compression',
+                   help='Indicates whether content compression is enabled on AzureFrontDoor. Default value is false. '
+                        'If compression is enabled, content will be served as compressed if user requests for a compressed version. '
+                        'Content won''t be compressed on AzureFrontDoor when requested content is smaller than 1 byte or larger than 1 MB.')
 
     with self.argument_context('cdn afd-route list') as c:
         c.argument('profile_name', id_part=None)
@@ -289,7 +289,6 @@ def load_arguments(self, _):
 
     # AFD RuleSets #
     with self.argument_context('cdn afd-rule-set') as c:
-        c.argument('name', name_arg_type, id_part='child_name_1', help='Name of the rule set.')
         c.argument('rule_set_name', rule_set_name_type, id_part='child_name_1', help='Name of the rule set.')
         c.argument('profile_name', help=profile_name_help, id_part='name')
 
@@ -297,8 +296,7 @@ def load_arguments(self, _):
         c.argument('profile_name', id_part=None)
 
     # AFD Rules #
-    with self.argument_context('cdn afd-rule') as c:
-        c.argument('name', name_arg_type, id_part='child_name_2', help='Name of the rule.')        
+    with self.argument_context('cdn afd-rule') as c: 
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('rule_set_name', id_part='child_name_1', help='Name of the rule set.')
         configure_rule_parameters(c)

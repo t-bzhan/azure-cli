@@ -6,9 +6,9 @@
 from typing import (Optional, List)
 
 
-from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledState, Route, LinkToDefaultDomain,
-                                   AFDEndpointProtocols, HttpsRedirect, ForwardingProtocol, QueryStringCachingBehavior, RouteUpdateParameters,
-                                   AFDOriginUpdateParameters, AFDOriginGroupUpdateParameters, SharedPrivateLinkResourceProperties)
+from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledState, Route, LinkToDefaultDomain, ResourceReference,
+                                   AFDEndpointProtocols, HttpsRedirect, ForwardingProtocol, QueryStringCachingBehavior, RouteUpdateParameters, HealthProbeParameters,
+                                   AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters)
 
 from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations,
                                        RoutesOperations, RuleSetsOperations, RulesOperations)
@@ -25,7 +25,7 @@ def _update_mapper(existing, new, keys):
         new_value = getattr(new, key)
         setattr(new, key, new_value if new_value is not None else existing_value)
 
-def create_afd_endpoint(client, resource_group_name, profile_name, name, origin_response_timeout_seconds, enabled_state,
+def create_afd_endpoint(client, resource_group_name, profile_name, endpoint_name, origin_response_timeout_seconds, enabled_state,
                     location=None, tags=None, no_wait=None):
 
     endpoint = AFDEndpoint(location=location,
@@ -33,7 +33,7 @@ def create_afd_endpoint(client, resource_group_name, profile_name, name, origin_
                         enabled_state = enabled_state,
                         tags=tags)
 
-    return sdk_no_wait(no_wait, client.afd_endpoints.create, resource_group_name, profile_name, name, endpoint)
+    return sdk_no_wait(no_wait, client.afd_endpoints.create, resource_group_name, profile_name, endpoint_name, endpoint)
 
 
 def create_afd_origin_group(client: AFDOriginGroupsOperations,
@@ -52,10 +52,6 @@ def create_afd_origin_group(client: AFDOriginGroupsOperations,
     response_error_detection_error_types: Optional[str] = None
     response_error_detection_failover_threshold: Optional[int] = None
     response_error_detection_status_code_ranges: Optional[str] = None
-
-    from azure.mgmt.cdn.models import (AFDOriginGroup,
-                                       LoadBalancingSettingsParameters,
-                                       HealthProbeParameters)
 
     health_probe_parameters = HealthProbeParameters(probe_path=probe_path,
                                                   probe_request_type=probe_request_type,
@@ -92,35 +88,22 @@ def update_afd_origin_group(client: AFDOriginGroupsOperations,
     response_error_detection_status_code_ranges: Optional[str] = None
 
     existing = client.get(resource_group_name, profile_name, origin_group_name)
+    health_probe_parameters = HealthProbeParameters(probe_path=probe_path if probe_path is not None else existing.health_probe_settings.probe_path,
+                                                  probe_request_type=probe_request_type if probe_request_type is not None else existing.health_probe_settings.probe_request_type,
+                                                  probe_protocol=probe_protocol if probe_protocol is not None else existing.health_probe_settings.probe_protocol,
+                                                  probe_interval_in_seconds=probe_interval_in_seconds if probe_interval_in_seconds is not None else existing.health_probe_settings.probe_interval_in_seconds)
 
-    afd_origin_group_update_parameters = AFDOriginGroupUpdateParameters(load_balancing_settings=existing.load_balancing_settings,
-                                                                        health_probe_settings=existing.health_probe_settings)
+    load_balancing_settings_parameters = LoadBalancingSettingsParameters(sample_size=load_balancing_sample_size if load_balancing_sample_size is not None else existing.load_balancing_settings.sample_size,
+                                                  successful_samples_required=load_balancing_successful_samples_required if load_balancing_successful_samples_required is not None else existing.load_balancing_settings.successful_samples_required,
+                                                  additional_latency_in_milliseconds=load_balancing_additional_latency_in_milliseconds if load_balancing_additional_latency_in_milliseconds is not None else existing.load_balancing_settings.additional_latency_in_milliseconds)
 
-    if load_balancing_sample_size is not None:
-        afd_origin_group_update_parameters.load_balancing_settings.sample_size = load_balancing_sample_size
+    afd_origin_group = AFDOriginGroup(load_balancing_settings=load_balancing_settings_parameters,
+                               health_probe_settings=health_probe_parameters)
 
-    if load_balancing_sample_size is not None:
-        afd_origin_group_update_parameters.load_balancing_settings.successful_samples_required = load_balancing_successful_samples_required
-
-    if load_balancing_sample_size is not None:
-        afd_origin_group_update_parameters.load_balancing_settings.additional_latency_in_milliseconds = load_balancing_additional_latency_in_milliseconds
-
-    if probe_request_type is not None:
-        afd_origin_group_update_parameters.health_probe_settings.probe_request_type = probe_request_type
-
-    if probe_protocol is not None:
-        afd_origin_group_update_parameters.health_probe_settings.probe_protocol = probe_protocol
-
-    if probe_path is not None:
-        afd_origin_group_update_parameters.health_probe_settings.probe_path = probe_path
-
-    if probe_interval_in_seconds is not None:
-        afd_origin_group_update_parameters.health_probe_settings.probe_interval_in_seconds = probe_interval_in_seconds
-
-    return client.update(resource_group_name,
+    return client.create(resource_group_name,
                          profile_name,
                          origin_group_name,
-                         afd_origin_group_update_parameters).result()
+                         afd_origin_group).result()
 
 
 def create_afd_origin(client: AFDOriginsOperations,
@@ -130,6 +113,7 @@ def create_afd_origin(client: AFDOriginsOperations,
                   origin_name: str,
                   host_name: str,
                   enabled_state: EnabledState,
+                  enable_private_link: bool,
                   private_link: str,
                   private_link_location: str,
                   group_id: str,
@@ -140,11 +124,19 @@ def create_afd_origin(client: AFDOriginsOperations,
                   priority: int = 1,
                   weight: int = 1000):
 
-    from azure.mgmt.cdn.models import AFDOrigin
-    from azure.mgmt.cdn.models import SharedPrivateLinkResourceProperties
     from azure.mgmt.cdn.models import ResourceReference
 
-    # TO-DO: Add support for private link if RP support it.
+    if enable_private_link is not None:
+        if enable_private_link:
+            shared_private_link_resource =  SharedPrivateLinkResourceProperties(
+                                                private_link=ResourceReference(id=private_link),
+                                                private_link_location=private_link_location,
+                                                group_id=group_id,
+                                                request_message=request_message
+                                            )
+        else:
+            shared_private_link_resource = None
+
     return client.create(resource_group_name,
                          profile_name,
                          origin_group_name,
@@ -156,12 +148,7 @@ def create_afd_origin(client: AFDOriginsOperations,
                              origin_host_header=origin_host_header,
                              priority=priority,
                              weight=weight,
-                             shared_private_link_resource=SharedPrivateLinkResourceProperties(
-                                 private_link=ResourceReference(id=private_link),
-                                 private_link_location=private_link_location,
-                                 group_id=group_id,
-                                 request_message=request_message
-                             )))
+                             shared_private_link_resource=shared_private_link_resource))
 
 def update_afd_origin(client: AFDOriginsOperations,
                   resource_group_name: str,
@@ -175,35 +162,46 @@ def update_afd_origin(client: AFDOriginsOperations,
                   origin_host_header: Optional[str] = None,
                   priority: int = None,
                   weight: int = None,
+                  enable_private_link: bool = None,
                   private_link: str = None,
                   private_link_location: str = None,
                   group_id: str = None,
                   request_message: str = None):
-    from azure.mgmt.cdn.models import SharedPrivateLinkResourceProperties
-    from azure.mgmt.cdn.models import ResourceReference
 
     existing = client.get(resource_group_name, profile_name, origin_group_name, origin_name)
     shared_private_link_resource = existing.shared_private_link_resource
-    if any(p is not None for p in [private_link, private_link_location, group_id, request_message]):
-        shared_private_link_resource =  SharedPrivateLinkResourceProperties(
-                                            private_link=ResourceReference(id=private_link),
-                                            private_link_location=private_link_location,
-                                            group_id=group_id,
-                                            request_message=request_message
-                                        )
+    if enable_private_link is not None:
+        if enable_private_link:
+            if shared_private_link_resource is None:                
+                shared_private_link_resource =  SharedPrivateLinkResourceProperties(
+                                                    private_link=ResourceReference(id=private_link),
+                                                    private_link_location=private_link_location,
+                                                    group_id=group_id,
+                                                    request_message=request_message
+                                                )
+            else:
+                shared_private_link_resource =  SharedPrivateLinkResourceProperties(
+                                    private_link=ResourceReference(id=private_link if private_link is not None else shared_private_link_resource.private_link),
+                                    private_link_location=private_link_location if private_link_location is not None else shared_private_link_resource.private_link,
+                                    group_id=group_id if group_id is not None else shared_private_link_resource.group_id,
+                                    request_message=request_message if request_message is not None else shared_private_link_resource.request_message
+                                )
+        else:
+            shared_private_link_resource = None
 
     # TO-DO: Add enabled_state if RP fix the swagger mismatch issue.
-    return client.update(resource_group_name,
+    # client.update does not allow unset field
+    return client.create(resource_group_name,
                          profile_name,
                          origin_group_name,
                          origin_name,
-                         AFDOriginUpdateParameters(
-                             host_name=host_name,
-                             http_port=http_port,
-                             https_port=https_port,
-                             origin_host_header=origin_host_header,
-                             priority=priority,
-                             weight=weight,
+                         AFDOrigin(
+                             host_name=host_name if host_name is not None else existing.host_name,
+                             http_port=http_port if http_port is not None else existing.http_port,
+                             https_port=https_port if https_port is not None else existing.https_port,
+                             origin_host_header=origin_host_header if origin_host_header is not None else existing.origin_host_header,
+                             priority=priority if priority is not None else existing.priority,
+                             weight=weight if weight is not None else existing.priority,
                              shared_private_link_resource=shared_private_link_resource))
 
 
@@ -226,10 +224,7 @@ def create_afd_route(client: RoutesOperations,
                   rule_sets: List[str] = None):
 
     from azure.mgmt.cdn.models import ResourceReference
-
-    # TO-DO: Add support for private link if RP support it.
-    # TO-DO: Add enabled_state if RP fix the swagger mismatch issue.
-    
+   
     formatted_custom_domains = []
     if custom_domains is not None:
         for custom_domain in custom_domains:
@@ -294,28 +289,23 @@ def update_afd_route(client: RoutesOperations,
                   patterns_to_match: List[str] = None,
                   rule_sets: List[str] = None):
 
-    from azure.mgmt.cdn.models import ResourceReference
-
-    # TO-DO: Add support for private link if RP support it.
-    # TO-DO: Add enabled_state if RP fix the swagger mismatch issue.
-
     existing = client.get(resource_group_name,
                       profile_name,
                       endpoint_name,
                       route_name)
 
-    routeUpdateParameters = RouteUpdateParameters(
-                             custom_domains=existing.custom_domains,
-                             origin_path = existing.origin_path if origin_path is None else origin_path,
-                             patterns_to_match=existing.patterns_to_match if patterns_to_match is None else patterns_to_match,
-                             supported_protocols=existing.supported_protocols if supported_protocols is None else supported_protocols,
-                             https_redirect=existing.https_redirect if https_redirect is None else https_redirect,
-                             origin_group=existing.origin_group,
-                             forwarding_protocol=existing.forwarding_protocol if forwarding_protocol is None else forwarding_protocol,
-                             rule_sets=existing.rule_sets,
-                             query_string_caching_behavior=query_string_caching_behavior if query_string_caching_behavior else query_string_caching_behavior,
-                             compression_settings=existing.compression_settings,
-                             link_to_default_domain=link_to_default_domain if link_to_default_domain is None else link_to_default_domain)    
+    route = Route(
+                custom_domains=existing.custom_domains,
+                origin_path = existing.origin_path if origin_path is None else origin_path,
+                patterns_to_match=existing.patterns_to_match if patterns_to_match is None else patterns_to_match,
+                supported_protocols=existing.supported_protocols if supported_protocols is None else supported_protocols,
+                https_redirect=existing.https_redirect if https_redirect is None else https_redirect,
+                origin_group=existing.origin_group,
+                forwarding_protocol=existing.forwarding_protocol if forwarding_protocol is None else forwarding_protocol,
+                rule_sets=existing.rule_sets,
+                query_string_caching_behavior=existing.query_string_caching_behavior if query_string_caching_behavior is None else query_string_caching_behavior,
+                compression_settings=existing.compression_settings,
+                link_to_default_domain=existing.link_to_default_domain if link_to_default_domain is None else link_to_default_domain)    
     
     if custom_domains is not None:
         formatted_custom_domains = []
@@ -327,14 +317,14 @@ def update_afd_route(client: RoutesOperations,
             # If the origin is not an ID, assume it's a name and format it as an ID.
             formatted_custom_domains.append(ResourceReference(id=custom_domain))
 
-        routeUpdateParameters.custom_domains = formatted_custom_domains
+        route.custom_domains = formatted_custom_domains
     
     if origin_group is not None:
         if '/' not in origin_group:
                 origin_group = f'/subscriptions/{client.config.subscription_id}/resourceGroups/{resource_group_name}' \
                                 f'/providers/Microsoft.Cdn/profiles/{profile_name}/originGroups/{origin_group}'
 
-        routeUpdateParameters.origin_group = origin_group
+        route.origin_group = origin_group
 
     if rule_sets is not None:
         formatted_rule_sets = []
@@ -346,21 +336,28 @@ def update_afd_route(client: RoutesOperations,
             # If the origin is not an ID, assume it's a name and format it as an ID.
             formatted_rule_sets.append(ResourceReference(id=rule_set))
 
-        routeUpdateParameters.rule_sets = formatted_rule_sets
-
+        route.rule_sets = formatted_rule_sets
+    
     if is_compression_enabled is not None:
-        from azure.mgmt.cdn.models import CompressionSettings
-        compression_settings = CompressionSettings(
-            content_types_to_compress=content_types_to_compress,
-            is_compression_enabled=is_compression_enabled
-        )
-        routeUpdateParameters.compression_settings = compression_settings
+        if is_compression_enabled:
+            if route.compression_settings is None:
+                route.compression_settings = CompressionSettings(
+                    content_types_to_compress=content_types_to_compress,
+                    is_compression_enabled=is_compression_enabled
+                )
+            else:
+                route.compression_settings = CompressionSettings(
+                    content_types_to_compress=content_types_to_compress if content_types_to_compress is not None else route.compression_settings.content_types_to_compress,
+                    is_compression_enabled=is_compression_enabled
+                )
+        else:
+            route.compression_settings = None
 
-    return client.update(resource_group_name,
+    return client.create(resource_group_name,
                          profile_name,
                          endpoint_name,
                          route_name,
-                         routeUpdateParameters)
+                         route)
 
 def create_afd_rule_set(client: RuleSetsOperations,
                   resource_group_name: str,
