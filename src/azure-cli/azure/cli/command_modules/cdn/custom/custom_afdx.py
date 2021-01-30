@@ -8,10 +8,11 @@ from typing import (Optional, List)
 
 from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledState, Route, LinkToDefaultDomain, ResourceReference,
                                    AFDEndpointProtocols, HttpsRedirect, ForwardingProtocol, QueryStringCachingBehavior, RouteUpdateParameters, HealthProbeParameters,
-                                   AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters)
+                                   AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters,
+                                   SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation)
 
 from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations,
-                                       RoutesOperations, RuleSetsOperations, RulesOperations)
+                                       RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations)
 
 from azure.cli.core.util import (sdk_no_wait)
 from knack.util import CLIError
@@ -408,5 +409,56 @@ def create_afd_rule(client: RulesOperations, resource_group_name, profile_name, 
                          rule_set_name,
                          rule_name,
                          rule=rule)
+
+def create_afd_security_policy(client: SecurityPoliciesOperations, 
+                                resource_group_name, 
+                                profile_name, 
+                                security_policy_name,                                
+                                domain_ids: List[str],
+                                waf_policy_id: str):
+
+    if any([("/afdEndpoints/" not in domain_id and "/customdomains/" not in domain_id) for domain_id in domain_ids]):
+        raise CLIError('Domain id should either be endpoint id or custom domain id.')
+
+    if "/frontdoorwebapplicationfirewallpolicies/" not in waf_policy_id:
+        raise CLIError('waf_policy_id should be front door web application firewall policy id.')
+
+    # Add patterns and multiple domains support in the feature
+    parameters = SecurityPolicyWebApplicationFirewallParameters(
+        waf_policy=ResourceReference(id=waf_policy_id),
+        associations=[SecurityPolicyWebApplicationFirewallAssociation(domains=[ResourceReference(id=doamin_id) for doamin_id in domain_ids], patterns_to_match=["/*"])]
+    )
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         security_policy_name,
+                         parameters=parameters)
+
+def update_afd_security_policy(client: SecurityPoliciesOperations, 
+                                resource_group_name, 
+                                profile_name, 
+                                security_policy_name,                                
+                                domain_ids: List[str] = None,
+                                waf_policy_id: str = None):    
+    
+    if domain_ids is not None and any([("/afdEndpoints/" not in domain_id and "/customdomains/" not in domain_id) for domain_id in domain_ids]):
+        raise CLIError('Domain id should either be endpoint id or custom domain id.')
+
+    if waf_policy_id is not None and "/frontdoorwebapplicationfirewallpolicies/" not in waf_policy_id:
+        raise CLIError('waf_policy_id should be front door web application firewall policy id.')
+    
+    existing = client.get(resource_group_name, profile_name, security_policy_name)
+
+    # Add patterns and multiple domains support in the feature
+    parameters = SecurityPolicyWebApplicationFirewallParameters(
+        waf_policy=ResourceReference(id=waf_policy_id) if waf_policy_id is not None else existing.parameters.waf_policy,
+        associations=[SecurityPolicyWebApplicationFirewallAssociation(domains=[ResourceReference(id=doamin_id) for doamin_id in domain_ids], 
+                    patterns_to_match=["/*"])] if domain_ids is not None else existing.parameters.associations
+    )
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         security_policy_name,
+                         parameters=parameters)
 
 # endregion

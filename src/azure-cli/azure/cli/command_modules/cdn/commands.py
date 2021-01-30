@@ -328,10 +328,15 @@ def load_command_table(self, _):
         g.show_command('show', 'get')
         g.command('list', 'list_by_profile')
 
-    with self.command_group('cdn afd-custom-domain', cdn_afd_custom_domain_sdk) as g:
+    with self.command_group('cdn afd-security-policy', cdn_afd_security_policy_sdk, is_preview=True) as g:
         g.show_command('show', 'get')
         g.command('list', 'list_by_profile')
+        g.custom_command('create', 'create_afd_security_policy', client_factory=cf_afd_security_policies)
+        g.custom_command('update', 'update_afd_security_policy', client_factory=cf_afd_security_policies)
+        g.command('delete', 'delete', confirmation=True)
 
-    with self.command_group('cdn afd-security-policy', cdn_afd_security_policy_sdk) as g:
+    with self.command_group('cdn afd-custom-domain', cdn_afd_domain_sdk) as g:
         g.show_command('show', 'get')
+        g.command('delete', 'delete')
         g.command('list', 'list_by_profile')
+        #g.custom_command('create', 'create_custom_domain', client_factory=cf_cdn)

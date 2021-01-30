@@ -23,6 +23,7 @@ def load_arguments(self, _):
     rule_set_name_type = CLIArgumentType(options_list=('--rule-set-name'), metavar='RULE_SET_NAME')
     route_name_type = CLIArgumentType(options_list=('--route-name'), metavar='ROUTE_NAME')
     rule_name_type = CLIArgumentType(options_list=('--rule-name'), metavar='RULE_NAME')
+    custom_name_arg_type = CLIArgumentType(options_list=('--custom-domain-name'), metavar='CUSTOM_DOMAIN_NAME')
     origin_name_type = CLIArgumentType(options_list=('--origin-name'), metavar='ORIGIN_NAME')
     profile_name_help = 'Name of the CDN profile which is unique within the resource group.'
 
@@ -301,7 +302,7 @@ def load_arguments(self, _):
         c.argument('rule_set_name', id_part='child_name_1', help='Name of the rule set.')
         configure_rule_parameters(c)
         c.argument('rule_name', rule_name_type, id_part='child_name_2', help='Name of the rule.')
-
+         
     # AFD Secrets #
     with self.argument_context('cdn afd-secret list') as c:
         c.argument('profile_name', id_part=None)
@@ -314,9 +315,18 @@ def load_arguments(self, _):
     with self.argument_context('cdn afd-security-policy list') as c:
         c.argument('profile_name', id_part=None)
 
-    # AFD Log Analytics #
+    # AFD Log Analytics # 
 
+    # AFD Security Policy #
+    with self.argument_context('cdn afd-security-policy') as c: 
+        c.argument('profile_name', help=profile_name_help, id_part='name')
+        c.argument('security_policy_name', id_part='child_name_1', help='Name of the security policy.')
+        c.argument('domain_ids', nargs='+', help='The domains to associate with the WAF policy. Could either be the id of an endpoint (default domain will be used in that case) or id of a custom domain') 
 
+    # AFD Custom Domain
+    with self.argument_context('cdn afd-custom-domain') as c:
+        c.argument('custom_domain_name', custom_name_arg_type, id_part="child_name_1", help='Name of the custom domain.')     
+       
 def configure_rule_parameters(c):
         c.argument('rule_name', help='Name of the rule.')
         c.argument('order', help='The order of the rule. The order number must start from 0 and consecutive.\

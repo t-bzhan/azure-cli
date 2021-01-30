@@ -56,3 +56,5 @@ from .custom_afdx import create_afd_route                             # pylint: 
 from .custom_afdx import create_afd_rule_set                          # pylint: disable=unused-import
 from .custom_afdx import create_afd_rule                              # pylint: disable=unused-import
 from .custom_afdx import update_afd_route                             # pylint: disable=unused-import
+from .custom_afdx import create_afd_security_policy                   # pylint: disable=unused-import
+from .custom_afdx import update_afd_security_policy                   # pylint: disable=unused-import
