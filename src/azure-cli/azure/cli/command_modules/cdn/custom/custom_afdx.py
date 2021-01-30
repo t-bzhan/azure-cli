@@ -9,22 +9,18 @@ from typing import (Optional, List)
 from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledState, Route, LinkToDefaultDomain, ResourceReference,
                                    AFDEndpointProtocols, HttpsRedirect, ForwardingProtocol, QueryStringCachingBehavior, RouteUpdateParameters, HealthProbeParameters,
                                    AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters,
-                                   SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation)
+                                   SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation,
+                                   CustomerCertificateParameters)
 
-from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations,
+from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations, SecretsOperations,
                                        RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations)
 
 from azure.cli.core.util import (sdk_no_wait)
 from knack.util import CLIError
 from knack.log import get_logger
+from .custom import _update_mapper
 
 logger = get_logger(__name__)
-
-def _update_mapper(existing, new, keys):
-    for key in keys:
-        existing_value = getattr(existing, key)
-        new_value = getattr(new, key)
-        setattr(new, key, new_value if new_value is not None else existing_value)
 
 def create_afd_endpoint(client, resource_group_name, profile_name, endpoint_name, origin_response_timeout_seconds, enabled_state,
                     location=None, tags=None, no_wait=None):
@@ -183,7 +179,7 @@ def update_afd_origin(client: AFDOriginsOperations,
             else:
                 shared_private_link_resource =  SharedPrivateLinkResourceProperties(
                                     private_link=ResourceReference(id=private_link if private_link is not None else shared_private_link_resource.private_link),
-                                    private_link_location=private_link_location if private_link_location is not None else shared_private_link_resource.private_link,
+                                    private_link_location=private_link_location if private_link_location is not None else shared_private_link_resource.private_link_location,
                                     group_id=group_id if group_id is not None else shared_private_link_resource.group_id,
                                     request_message=request_message if request_message is not None else shared_private_link_resource.request_message
                                 )
@@ -459,6 +455,57 @@ def update_afd_security_policy(client: SecurityPoliciesOperations,
     return client.create(resource_group_name,
                          profile_name,
                          security_policy_name,
+                         parameters=parameters)
+
+def create_afd_secret(client: SecretsOperations, 
+                                resource_group_name, 
+                                profile_name, 
+                                secret_name,                                                                
+                                secret_source,
+                                secret_version :str = None,
+                                use_latest_version: bool = True):
+
+    if "/certificates/" not in secret_source:
+        raise CLIError('secret_source should be valid key vault certificate id.')
+
+    if secret_version is None and not use_latest_version:
+        raise CLIError('Either specify secret_version or enable use_latest_version.')
+
+    # Only support CustomerCertificate for the moment
+    parameters = CustomerCertificateParameters(
+        secret_source=ResourceReference(id=secret_source),
+        secret_version=secret_version,
+        use_latest_version= secret_version is None
+    )
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         secret_name,
+                         parameters=parameters)
+
+def update_afd_secret(client: SecretsOperations, 
+                                resource_group_name, 
+                                profile_name, 
+                                secret_name,                                                                
+                                secret_source : str = None,
+                                secret_version :str = None,
+                                use_latest_version: bool = None):
+
+    existing = client.get(resource_group_name, profile_name, secret_name)
+    
+    if secret_source is not None and "/certificates/" not in secret_source:
+        raise CLIError('secret_source should be valid key vault certificate id.')
+
+    # Only support CustomerCertificate for the moment
+    parameters = CustomerCertificateParameters(
+        secret_source=ResourceReference(id=secret_source) if secret_source is not None else existing.paramters.secret_source,
+        secret_version=secret_version,
+        use_latest_version=use_latest_version
+    )
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         secret_name,
                          parameters=parameters)
 
 # endregion

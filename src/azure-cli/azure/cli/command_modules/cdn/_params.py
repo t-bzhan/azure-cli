@@ -24,6 +24,7 @@ def load_arguments(self, _):
     route_name_type = CLIArgumentType(options_list=('--route-name'), metavar='ROUTE_NAME')
     rule_name_type = CLIArgumentType(options_list=('--rule-name'), metavar='RULE_NAME')
     custom_name_arg_type = CLIArgumentType(options_list=('--custom-domain-name'), metavar='CUSTOM_DOMAIN_NAME')
+    secret_name_arg_type = CLIArgumentType(options_list=('--secret-name'), metavar='SECRET_NAME')
     origin_name_type = CLIArgumentType(options_list=('--origin-name'), metavar='ORIGIN_NAME')
     profile_name_help = 'Name of the CDN profile which is unique within the resource group.'
 
@@ -312,7 +313,12 @@ def load_arguments(self, _):
     # AFD Custom Domain
     with self.argument_context('cdn afd-custom-domain') as c:
         c.argument('custom_domain_name', custom_name_arg_type, id_part="child_name_1", help='Name of the custom domain.')     
-       
+
+    # AFD Secret
+    with self.argument_context('cdn afd-secret') as c:
+        c.argument('secret_name', secret_name_arg_type, id_part="child_name_1", help='Name of the custom domain.')     
+        c.argument('use_latest_version', arg_type=get_three_state_flag())
+
 def configure_rule_parameters(c):
         c.argument('rule_name', help='Name of the rule.')
         c.argument('order', help='The order of the rule. The order number must start from 0 and consecutive.\

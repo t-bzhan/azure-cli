@@ -68,3 +68,6 @@ def cf_afd_security_policies(cli_ctx, _):
 
 def cf_afd_custom_domain(cli_ctx, _):
     return cf_cdn(cli_ctx).afd_custom_domains    
+    
+def cf_afd_secrets(cli_ctx, _):
+    return cf_cdn(cli_ctx).secrets    

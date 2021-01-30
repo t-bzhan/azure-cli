@@ -9,7 +9,8 @@ from azure.cli.core.commands import CliCommandType
 
 from ._client_factory import (cf_cdn, cf_custom_domain, cf_endpoints, cf_profiles, cf_origins, cf_resource_usage,
                               cf_edge_nodes, cf_waf_policy, cf_waf_rule_set, cf_origin_groups, cf_afd_endpoints, cf_afd_origin_groups,
-                              cf_afd_origins, cf_afd_routes, cf_afd_rule_sets, cf_afd_rules, cf_afd_security_policies, cf_afd_custom_domain)
+                              cf_afd_origins, cf_afd_routes, cf_afd_rule_sets, cf_afd_rules, cf_afd_security_policies, cf_afd_custom_domain,
+                              cf_afd_secrets)
 
 
 def _not_found(message):
@@ -38,6 +39,7 @@ def load_command_table(self, _):
     route_not_found_msg = _not_found_msg.format('Route')
     rule_set_not_found_msg = _not_found_msg.format('Rule Set')
     security_policy_not_found_msg = _not_found_msg.format('Security Policy')
+    secret_not_found_msg = _not_found_msg.format('Secret')
 
     cdn_sdk = CliCommandType(
         operations_tmpl='azure.mgmt.cdn#CdnManagementClient.{}',
@@ -136,6 +138,12 @@ def load_command_table(self, _):
         operations_tmpl='azure.mgmt.cdn.operations#AFDCustomDomainsOperations.{}',
         client_factory=cf_afd_custom_domain,
         exception_handler=_not_found(cd_not_found_msg)
+    )
+
+    cdn_afd_secret_sdk = CliCommandType(
+        operations_tmpl='azure.mgmt.cdn.operations#SecretsOperations.{}',
+        client_factory=cf_afd_secrets,
+        exception_handler=_not_found(secret_not_found_msg)
     )
 
     with self.command_group('cdn', cdn_sdk) as g:
@@ -298,7 +306,6 @@ def load_command_table(self, _):
         g.show_command('show', 'get')
         g.command('list', 'list_by_profile')
         g.custom_command('create', 'create_afd_rule_set', client_factory=cf_afd_rule_sets)
-        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
         g.command('delete', 'delete', confirmation=True)
 
     with self.command_group('cdn afd-rule', cdn_afd_rule_sdk, is_preview=True) as g:
@@ -320,3 +327,10 @@ def load_command_table(self, _):
         g.command('delete', 'delete')
         g.command('list', 'list_by_profile')
         #g.custom_command('create', 'create_custom_domain', client_factory=cf_cdn)
+
+    with self.command_group('cdn afd-secret', cdn_afd_secret_sdk) as g:
+        g.show_command('show', 'get')
+        g.command('delete', 'delete')
+        g.command('list', 'list_by_profile')
+        g.custom_command('create', 'create_afd_secret', client_factory=cf_afd_secrets)
+        g.custom_command('update', 'update_afd_secret', client_factory=cf_afd_secrets)        
