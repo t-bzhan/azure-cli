@@ -9,10 +9,12 @@ from typing import (Optional, List)
 from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledState, Route, LinkToDefaultDomain, ResourceReference,
                                    AFDEndpointProtocols, HttpsRedirect, ForwardingProtocol, QueryStringCachingBehavior, RouteUpdateParameters, HealthProbeParameters,
                                    AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters,
-                                   SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation)
+                                   SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation,
+                                   CustomerCertificateParameters)
 
 from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations,
-                                       RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations)
+                                       RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations,
+                                       SecretsOperations)
 
 from azure.cli.core.util import (sdk_no_wait)
 from knack.util import CLIError
@@ -459,6 +461,29 @@ def update_afd_security_policy(client: SecurityPoliciesOperations,
     return client.create(resource_group_name,
                          profile_name,
                          security_policy_name,
+                         parameters=parameters)
+
+def create_afd_secret(client: SecretsOperations, 
+                      resource_group_name: str,
+                      profile_name: str,
+                      secret_name: str,
+                      secret_source_id: str,
+                      secret_version: str = None,
+                      use_latest_version: bool = True,
+                      certificate_authority: str = None,
+                      subject_alternative_names: List[str] = None):
+
+    parameters = CustomerCertificateParameters(
+        secret_source = ResourceReference(id=secret_source_id),
+        secret_version = secret_version,
+        use_latest_version = use_latest_version,
+        certificate_authority = certificate_authority,
+        subject_alternative_names = subject_alternative_names
+    )
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         secret_name,
                          parameters=parameters)
 
 # endregion

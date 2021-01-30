@@ -327,6 +327,8 @@ def load_command_table(self, _):
     with self.command_group('cdn afd-secret', cdn_afd_secret_sdk) as g:
         g.show_command('show', 'get')
         g.command('list', 'list_by_profile')
+        g.custom_command('create', 'create_afd_secret', client_factory=cf_afd_secrets)
+        g.command('delete', 'delete', confirmation=True)
 
     with self.command_group('cdn afd-security-policy', cdn_afd_security_policy_sdk, is_preview=True) as g:
         g.show_command('show', 'get')
