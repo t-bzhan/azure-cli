@@ -63,8 +63,14 @@ def cf_afd_rule_sets(cli_ctx, _):
 def cf_afd_rules(cli_ctx, _):
     return cf_cdn(cli_ctx).rules
 
+def cf_afd_secrets(cli_ctx, _):
+    return cf_cdn(cli_ctx).secrets
+
+def cf_afd_custom_domains(cli_ctx, _):
+    return cf_cdn(cli_ctx).afd_custom_domains
+
 def cf_afd_security_policies(cli_ctx, _):
     return cf_cdn(cli_ctx).security_policies
 
-def cf_afd_custom_domain(cli_ctx, _):
-    return cf_cdn(cli_ctx).afd_custom_domains    
+def cf_afd_log_analytics(cli_ctx, _):
+    return cf_cdn(cli_ctx).log_analytics

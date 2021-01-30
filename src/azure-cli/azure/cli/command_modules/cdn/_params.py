@@ -301,7 +301,21 @@ def load_arguments(self, _):
         c.argument('profile_name', help=profile_name_help, id_part='name')
         c.argument('rule_set_name', id_part='child_name_1', help='Name of the rule set.')
         configure_rule_parameters(c)
-        c.argument('rule_name', rule_name_type, id_part='child_name_2', help='Name of the rule.')  
+        c.argument('rule_name', rule_name_type, id_part='child_name_2', help='Name of the rule.')
+         
+    # AFD Secrets #
+    with self.argument_context('cdn afd-secret list') as c:
+        c.argument('profile_name', id_part=None)
+
+    # AFD Custom Domains #
+    with self.argument_context('cdn afd-custom-domain list') as c:
+        c.argument('profile_name', id_part=None)
+
+    # AFD Security Policies #
+    with self.argument_context('cdn afd-security-policy list') as c:
+        c.argument('profile_name', id_part=None)
+
+    # AFD Log Analytics # 
 
     # AFD Security Policy #
     with self.argument_context('cdn afd-security-policy') as c: 
