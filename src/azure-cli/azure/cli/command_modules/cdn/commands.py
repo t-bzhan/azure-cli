@@ -136,7 +136,7 @@ def load_command_table(self, _):
         exception_handler=_not_found(secret_not_found_msg)
     )
 
-    cdn_afd_custom_domain_sdk = CliCommandType(
+    cdn_afd_domain_sdk = CliCommandType(
         operations_tmpl='azure.mgmt.cdn.operations#AFDCustomDomainsOperations.{}',
         client_factory=cf_afd_custom_domains,
         exception_handler=_not_found(custom_domain_not_found_msg)
