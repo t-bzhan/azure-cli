@@ -3,6 +3,7 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
+import json
 from typing import (Optional, List)
 
 
@@ -356,16 +357,42 @@ def update_afd_route(client: RoutesOperations,
                          route_name,
                          route)
 
-def create_afd_rule_set(client: RuleSetsOperations,
+def create_afd_rule_set(cmd,
                   resource_group_name: str,
                   profile_name: str,
                   rule_set_name: str):
 
-    from azure.mgmt.cdn.models import RuleSet
-    return client.create(resource_group_name,
-                         profile_name,
-                         rule_set_name,
-                         rule_set=RuleSet())
+    from .._client_factory import cf_cdn
+    client = cf_cdn(cmd.cli_ctx).rule_sets
+
+    # The existing version of autorest.python does not support empty body for PUT request
+    # Use send_raw_request as an work-around.
+    # We should switch to native SDK call once autorest.python has fixed that.
+    from azure.mgmt.cdn.models import RuleSet, AfdErrorResponseException
+    from azure.cli.core.util import send_raw_request
+    from msrestazure.polling.arm_polling import ARMPolling
+    from msrest.polling import LROPoller
+    from msrest.pipeline import ClientRawResponse    
+
+    url = _build_rule_set_put_url(client.config.subscription_id,
+                                  resource_group_name,
+                                  profile_name,
+                                  rule_set_name,
+                                  client.api_version)
+
+    response = send_raw_request(cmd.cli_ctx, 'put', url, body=None)
+    if response.status_code not in [200, 201, 202]:
+        raise AfdErrorResponseException(client._deserialize, response)
+
+    deserialized = client._deserialize('RuleSet', response)
+    client_raw_response = ClientRawResponse(deserialized, response)
+
+    def get_long_running_output(response):
+        deserialized = client._deserialize('RuleSet', response)
+        return deserialized
+     
+    polling_method = ARMPolling(client.config.long_running_operation_timeout)
+    return LROPoller(client._client, client_raw_response, get_long_running_output, polling_method)
 
 # pylint: disable=too-many-locals
 def create_afd_rule(client: RulesOperations, resource_group_name, profile_name, rule_set_name,
@@ -507,5 +534,13 @@ def update_afd_secret(client: SecretsOperations,
                          profile_name,
                          secret_name,
                          parameters=parameters)
+
+def _build_rule_set_put_url(subscription_id, resource_group_name, profile_name, rule_set_name, api_version):
+    rule_set_url = f"/subscriptions/{subscription_id}/" \
+                              f"resourceGroups/{resource_group_name}/" \
+                              f"providers/Microsoft.Cdn/" \
+                              f"profiles/{profile_name}/ruleSets/" \
+                              f"{rule_set_name}?api-version={api_version}"
+    return rule_set_url
 
 # endregion

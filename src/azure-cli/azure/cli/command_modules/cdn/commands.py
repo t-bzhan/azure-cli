@@ -305,7 +305,7 @@ def load_command_table(self, _):
     with self.command_group('cdn afd-rule-set', cdn_afd_rule_set_sdk, is_preview=True) as g:
         g.show_command('show', 'get')
         g.command('list', 'list_by_profile')
-        g.custom_command('create', 'create_afd_rule_set', client_factory=cf_afd_rule_sets)
+        g.custom_command('create', 'create_afd_rule_set')
         g.command('delete', 'delete', confirmation=True)
 
     with self.command_group('cdn afd-rule', cdn_afd_rule_sdk, is_preview=True) as g:
