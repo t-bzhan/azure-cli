@@ -34,10 +34,11 @@ def create_afd_endpoint(client, resource_group_name, profile_name, endpoint_name
 
     return sdk_no_wait(no_wait, client.afd_endpoints.create, resource_group_name, profile_name, endpoint_name, endpoint)
 
-def update_afd_endpoint(client:AFDEndpointsOperations, resource_group_name, profile_name, endpoint_name, origin_response_timeout_seconds=None, enabled_state=None):
+def update_afd_endpoint(client:AFDEndpointsOperations, resource_group_name, profile_name, endpoint_name, origin_response_timeout_seconds=None, enabled_state=None, tags=None):
     update_properties = AFDEndpointUpdateParameters(
         origin_response_timeout_seconds=origin_response_timeout_seconds,
-        enabled_state=enabled_state
+        enabled_state=enabled_state,
+        tags=tags
     )
      
     return client.update(resource_group_name, profile_name, endpoint_name, update_properties)
