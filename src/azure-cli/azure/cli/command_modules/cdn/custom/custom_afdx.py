@@ -11,9 +11,10 @@ from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledS
                                    AFDEndpointProtocols, HttpsRedirect, ForwardingProtocol, QueryStringCachingBehavior, RouteUpdateParameters, HealthProbeParameters,
                                    AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters,
                                    SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation,
-                                   CustomerCertificateParameters, AFDDomain, AFDDomainHttpsParameters, AfdCertificateType, AfdMinimumTlsVersion)
+                                   CustomerCertificateParameters, AFDDomain, AFDDomainHttpsParameters, AfdCertificateType, AfdMinimumTlsVersion,
+                                   AFDEndpointUpdateParameters)
 
-from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations, SecretsOperations,
+from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations, SecretsOperations, AFDEndpointsOperations,
                                        RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations, AFDCustomDomainsOperations)
 
 from azure.cli.core.util import (sdk_no_wait)
@@ -33,6 +34,13 @@ def create_afd_endpoint(client, resource_group_name, profile_name, endpoint_name
 
     return sdk_no_wait(no_wait, client.afd_endpoints.create, resource_group_name, profile_name, endpoint_name, endpoint)
 
+def update_afd_endpoint(client:AFDEndpointsOperations, resource_group_name, profile_name, endpoint_name, origin_response_timeout_seconds=None, enabled_state=None):
+    update_properties = AFDEndpointUpdateParameters(
+        origin_response_timeout_seconds=origin_response_timeout_seconds,
+        enabled_state=enabled_state
+    )
+     
+    return client.update(resource_group_name, profile_name, endpoint_name, update_properties)
 
 def create_afd_origin_group(client: AFDOriginGroupsOperations,
                         resource_group_name: str,
@@ -111,11 +119,11 @@ def create_afd_origin(client: AFDOriginsOperations,
                   origin_name: str,
                   host_name: str,
                   enabled_state: EnabledState,
-                  enable_private_link: bool,
-                  private_link: str,
-                  private_link_location: str,
-                  group_id: str,
-                  request_message: str,
+                  enable_private_link: bool = None,
+                  private_link: str = None,
+                  private_link_location: str = None,
+                  group_id: str = None,
+                  request_message: str = None,
                   http_port: int = 80,
                   https_port: int = 443,
                   origin_host_header: Optional[str] = None,
@@ -124,16 +132,14 @@ def create_afd_origin(client: AFDOriginsOperations,
 
     from azure.mgmt.cdn.models import ResourceReference
 
-    if enable_private_link is not None:
-        if enable_private_link:
-            shared_private_link_resource =  SharedPrivateLinkResourceProperties(
-                                                private_link=ResourceReference(id=private_link),
-                                                private_link_location=private_link_location,
-                                                group_id=group_id,
-                                                request_message=request_message
-                                            )
-        else:
-            shared_private_link_resource = None
+    shared_private_link_resource = None
+    if enable_private_link:
+        shared_private_link_resource =  SharedPrivateLinkResourceProperties(
+                                            private_link=ResourceReference(id=private_link),
+                                            private_link_location=private_link_location,
+                                            group_id=group_id,
+                                            request_message=request_message
+                                        )
 
     return client.create(resource_group_name,
                          profile_name,
@@ -146,7 +152,8 @@ def create_afd_origin(client: AFDOriginsOperations,
                              origin_host_header=origin_host_header,
                              priority=priority,
                              weight=weight,
-                             shared_private_link_resource=shared_private_link_resource))
+                             shared_private_link_resource=shared_private_link_resource,
+                             enabled_state=enabled_state))
 
 def update_afd_origin(client: AFDOriginsOperations,
                   resource_group_name: str,
@@ -187,7 +194,6 @@ def update_afd_origin(client: AFDOriginsOperations,
         else:
             shared_private_link_resource = None
 
-    # TO-DO: Add enabled_state if RP fix the swagger mismatch issue.
     # client.update does not allow unset field
     return client.create(resource_group_name,
                          profile_name,
@@ -200,7 +206,8 @@ def update_afd_origin(client: AFDOriginsOperations,
                              origin_host_header=origin_host_header if origin_host_header is not None else existing.origin_host_header,
                              priority=priority if priority is not None else existing.priority,
                              weight=weight if weight is not None else existing.priority,
-                             shared_private_link_resource=shared_private_link_resource))
+                             shared_private_link_resource=shared_private_link_resource,
+                             enabled_state=enabled_state))
 
 
 def create_afd_route(client: RoutesOperations,

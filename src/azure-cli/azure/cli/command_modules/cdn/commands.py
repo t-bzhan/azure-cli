@@ -273,13 +273,11 @@ def load_command_table(self, _):
         g.command('list', 'list_by_profile')
         g.command('purge', 'purge_content', supports_no_wait=True)
         g.command('validate-custom-domain', 'validate_custom_domain')
+        
+        g.custom_command('update', 'update_afd_endpoint', client_factory=cf_afd_endpoints)
         g.custom_command('create', 'create_afd_endpoint', client_factory=cf_cdn,
                          doc_string_source='azure.mgmt.cdn.models#AFDEndpoint',
                          supports_no_wait=True)
-        g.generic_update_command('update', setter_name='update', setter_arg_name='endpoint_update_properties',
-                                 custom_func_name='update_endpoint',
-                                 doc_string_source='azure.mgmt.cdn.models#AFDEndpointUpdateParameters',
-                                 supports_no_wait=True)
 
     with self.command_group('cdn afd-origin-group', cdn_afd_origin_group_sdk, is_preview=True) as g:
         g.show_command('show', 'get')

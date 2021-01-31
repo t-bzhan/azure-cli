@@ -48,6 +48,7 @@ from .custom_waf import show_waf_rate_limit_rule                      # pylint: 
 from .custom_waf import list_waf_rate_limit_rules                     # pylint: disable=unused-import
 
 from .custom_afdx import create_afd_endpoint                          # pylint: disable=unused-import
+from .custom_afdx import update_afd_endpoint                          # pylint: disable=unused-import
 from .custom_afdx import create_afd_origin_group                      # pylint: disable=unused-import
 from .custom_afdx import update_afd_origin_group                      # pylint: disable=unused-import
 from .custom_afdx import create_afd_origin                            # pylint: disable=unused-import
