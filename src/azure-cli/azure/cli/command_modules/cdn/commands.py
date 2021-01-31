@@ -312,8 +312,19 @@ def load_command_table(self, _):
         g.show_command('show', 'get')
         g.command('list', 'list_by_rule_set')
         g.custom_command('create', 'create_afd_rule', client_factory=cf_afd_rules)
-        #g.custom_command('update', 'update_origin', client_factory=cf_afd_origins)
         g.command('delete', 'delete', confirmation=True)
+
+    with self.command_group('cdn afd-rule condition', cdn_afd_rule_sdk, is_preview=True) as g:
+        g.custom_command('add', 'add_afd_rule_condition', client_factory=cf_afd_rules,
+                         doc_string_source='azure.mgmt.cdn.models#Rule')
+        g.custom_command('remove', 'remove_afd_rule_condition', client_factory=cf_afd_rules,
+                         doc_string_source='azure.mgmt.cdn.models#Rule')
+
+    with self.command_group('cdn afd-rule action', cdn_afd_rule_sdk, is_preview=True) as g:
+        g.custom_command('add', 'add_afd_rule_action', client_factory=cf_afd_rules,
+                         doc_string_source='azure.mgmt.cdn.models#Rule')
+        g.custom_command('remove', 'remove_afd_rule_action', client_factory=cf_afd_rules,
+                         doc_string_source='azure.mgmt.cdn.models#Rule')
 
     with self.command_group('cdn afd-security-policy', cdn_afd_security_policy_sdk, is_preview=True) as g:
         g.show_command('show', 'get')

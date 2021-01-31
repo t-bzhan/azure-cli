@@ -337,7 +337,7 @@ def configure_rule_parameters(c):
         c.argument('negate_condition', arg_group="Match Condition", arg_type=get_three_state_flag(),
                    help='If true, negates the condition')
         c.argument('action_name', arg_group="Action", help='Name of the action.',
-                    arg_type=get_enum_type(DeliveryRuleAction._subtype_map["name"].keys()))
+                    arg_type=get_enum_type(["RequestHeader", "ResponseHeader"].extend(DeliveryRuleAction._subtype_map["name"].keys())))
         c.argument('cache_behavior', arg_group="Action",
                    arg_type=get_enum_type(['BypassCache', 'Override', 'SetIfMissing']),
                    help='Caching behavior for the requests.')

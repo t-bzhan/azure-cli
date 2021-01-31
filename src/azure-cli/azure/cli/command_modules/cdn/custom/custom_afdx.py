@@ -433,6 +433,68 @@ def create_afd_rule(client: RulesOperations, resource_group_name, profile_name, 
                          rule_name,
                          rule=rule)
 
+def add_afd_rule_condition(client: RulesOperations, resource_group_name, profile_name, rule_set_name,
+                  rule_name, match_variable, operator, match_values=None, selector=None,
+                  negate_condition=None, transform=None):
+    from .custom import create_condition
+
+    existing_rule = client.get(resource_group_name, profile_name, rule_set_name, rule_name)
+    condition = create_condition(match_variable, operator, match_values, selector, negate_condition, transform)
+    existing_rule.conditions.append(condition)
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         rule_set_name,
+                         rule_name,
+                         rule=existing_rule)
+
+def add_afd_rule_action(client: RulesOperations, resource_group_name, profile_name, rule_set_name,
+               rule_name, action_name, cache_behavior=None, cache_duration=None,
+               header_action=None, header_name=None, header_value=None, query_string_behavior=None,
+               query_parameters=None, redirect_type=None, redirect_protocol=None, custom_hostname=None,
+               custom_path=None, custom_querystring=None, custom_fragment=None, source_pattern=None,
+               destination=None, preserve_unmatched_path=None):
+    from .custom import create_action
+
+    existing_rule = client.get(resource_group_name, profile_name, rule_set_name, rule_name)
+    action = create_action(action_name, cache_behavior, cache_duration, header_action, header_name,
+                           header_value, query_string_behavior, query_parameters, redirect_type,
+                           redirect_protocol, custom_hostname, custom_path, custom_querystring,
+                           custom_fragment, source_pattern, destination, preserve_unmatched_path)
+
+    existing_rule.actions.append(action)
+    return client.create(resource_group_name,
+                         profile_name,
+                         rule_set_name,
+                         rule_name,
+                         rule=existing_rule)
+
+def remove_afd_rule_condition(client: RulesOperations, resource_group_name, profile_name, rule_set_name, rule_name, index):
+    existing_rule = client.get(resource_group_name, profile_name, rule_set_name, rule_name) 
+    if len(existing_rule.conditions) > 1 and index < len(existing_rule.conditions):
+        existing_rule.conditions.pop(index)
+    else:
+        logger.warning("Invalid condition index found. This command will be skipped. Please check the rule.")
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         rule_set_name,
+                         rule_name,
+                         rule=existing_rule)
+
+def remove_afd_rule_action(client: RulesOperations, resource_group_name, profile_name, rule_set_name, rule_name, index):
+    existing_rule = client.get(resource_group_name, profile_name, rule_set_name, rule_name) 
+    if len(existing_rule.actions) > 1 and index < len(existing_rule.actions):
+        existing_rule.actions.pop(index)
+    else:
+        logger.warning("Invalid condition index found. This command will be skipped. Please check the rule.")
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         rule_set_name,
+                         rule_name,
+                         rule=existing_rule)
+
 def create_afd_security_policy(client: SecurityPoliciesOperations, 
                                 resource_group_name, 
                                 profile_name, 
