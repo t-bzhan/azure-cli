@@ -5,7 +5,8 @@
 from knack.arguments import CLIArgumentType
 
 from azure.mgmt.cdn.models import (QueryStringCachingBehavior, SkuName, ActionType, EnabledState, HttpsRedirect, HealthProbeRequestType, ProbeProtocol,
-                                   AFDEndpointProtocols, ForwardingProtocol, LinkToDefaultDomain, DeliveryRuleCondition, DeliveryRuleAction)
+                                   AFDEndpointProtocols, ForwardingProtocol, LinkToDefaultDomain, DeliveryRuleCondition, DeliveryRuleAction,
+                                   AfdCertificateType, AfdMinimumTlsVersion)
 
 from azure.cli.core.commands.parameters import get_three_state_flag, tags_type, get_enum_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
@@ -312,7 +313,9 @@ def load_arguments(self, _):
 
     # AFD Custom Domain
     with self.argument_context('cdn afd-custom-domain') as c:
-        c.argument('custom_domain_name', custom_name_arg_type, id_part="child_name_1", help='Name of the custom domain.')     
+        c.argument('custom_domain_name', custom_name_arg_type, id_part="child_name_1", help='Name of the custom domain.') 
+        c.argument('certificate_type', arg_type=get_enum_type([item.value for item in list(AfdCertificateType)]), help='Defines the source of the SSL certificate.') 
+        c.argument('minimum_tls_version', arg_type=get_enum_type([item.value for item in list(AfdMinimumTlsVersion)]), help='TLS protocol version that will be used for Https.') 
 
     # AFD Secret
     with self.argument_context('cdn afd-secret') as c:

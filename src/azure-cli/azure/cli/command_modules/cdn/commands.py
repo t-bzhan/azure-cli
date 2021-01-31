@@ -326,7 +326,8 @@ def load_command_table(self, _):
         g.show_command('show', 'get')
         g.command('delete', 'delete')
         g.command('list', 'list_by_profile')
-        #g.custom_command('create', 'create_custom_domain', client_factory=cf_cdn)
+        g.custom_command('create', 'create_afd_custom_domain', client_factory=cf_afd_custom_domain)
+        g.custom_command('update', 'update_afd_custom_domain', client_factory=cf_afd_custom_domain)
 
     with self.command_group('cdn afd-secret', cdn_afd_secret_sdk) as g:
         g.show_command('show', 'get')

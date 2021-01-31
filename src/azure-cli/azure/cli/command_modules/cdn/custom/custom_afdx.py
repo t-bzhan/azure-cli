@@ -11,10 +11,10 @@ from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledS
                                    AFDEndpointProtocols, HttpsRedirect, ForwardingProtocol, QueryStringCachingBehavior, RouteUpdateParameters, HealthProbeParameters,
                                    AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters,
                                    SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation,
-                                   CustomerCertificateParameters)
+                                   CustomerCertificateParameters, AFDDomain, AFDDomainHttpsParameters, AfdCertificateType, AfdMinimumTlsVersion)
 
 from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations, SecretsOperations,
-                                       RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations)
+                                       RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations, AFDCustomDomainsOperations)
 
 from azure.cli.core.util import (sdk_no_wait)
 from knack.util import CLIError
@@ -534,6 +534,67 @@ def update_afd_secret(client: SecretsOperations,
                          profile_name,
                          secret_name,
                          parameters=parameters)
+
+def create_afd_custom_domain(client: AFDCustomDomainsOperations,
+                        resource_group_name: str,
+                        profile_name: str,
+                        custom_domain_name: str,
+                        host_name: str,
+                        certificate_type: AfdCertificateType,
+                        minimum_tls_version: AfdMinimumTlsVersion, 
+                        azure_dns_zone: str=None,
+                        secret: str = None):
+
+    if azure_dns_zone is not None and "/dnszones/" not in azure_dns_zone:
+        raise CLIError('azure_dns_zone should be valid azure dns zone id.')
+
+    if secret is not None and "/secrets/" not in secret:
+        raise CLIError('secret should be valid AFD secret id.')
+
+    tls_settings = AFDDomainHttpsParameters(certificate_type=certificate_type,
+                                            minimum_tls_version=minimum_tls_version,
+                                            secret=ResourceReference(id=secret) if secret is not None else None)
+
+    afd_domain = AFDDomain(host_name=host_name,
+                        tls_settings=tls_settings,
+                        azure_dns_zone=ResourceReference(id=azure_dns_zone) if azure_dns_zone is not None else None)
+ 
+    return client.create(resource_group_name,
+                         profile_name,
+                         custom_domain_name,
+                         afd_domain).result()
+
+def update_afd_custom_domain(client: AFDCustomDomainsOperations,
+                        resource_group_name: str,
+                        profile_name: str,
+                        custom_domain_name: str,
+                        certificate_type: AfdCertificateType = None,
+                        minimum_tls_version: AfdMinimumTlsVersion = None, 
+                        azure_dns_zone: str = None,
+                        secret: str = None):
+
+    if azure_dns_zone is not None and "/dnszones/" not in azure_dns_zone:
+        raise CLIError('azure_dns_zone should be valid azure dns zone id.')
+
+    if secret is not None and "/secrets/" not in secret:
+        raise CLIError('secret should be valid AFD secret id.')
+
+    existing = client.get(resource_group_name, profile_name, custom_domain_name)
+
+    tls_settings = AFDDomainHttpsParameters(certificate_type=certificate_type,
+                                            minimum_tls_version=minimum_tls_version,
+                                            secret=ResourceReference(id=secret) if secret is not None else None)
+
+    _update_mapper(existing.tls_settings, tls_settings, ["certificate_type", "minimum_tls_version", "secret"])
+
+    afd_domain = AFDDomain(host_name=existing.host_name,
+                        tls_settings=tls_settings,
+                        azure_dns_zone=ResourceReference(id=azure_dns_zone) if azure_dns_zone is not None else existing.azure_dns_zone)
+
+    return client.create(resource_group_name,
+                         profile_name,
+                         custom_domain_name,
+                         afd_domain).result()
 
 def _build_rule_set_put_url(subscription_id, resource_group_name, profile_name, rule_set_name, api_version):
     rule_set_url = f"/subscriptions/{subscription_id}/" \

@@ -60,3 +60,5 @@ from .custom_afdx import create_afd_security_policy                   # pylint: 
 from .custom_afdx import update_afd_security_policy                   # pylint: disable=unused-import
 from .custom_afdx import create_afd_secret                            # pylint: disable=unused-import
 from .custom_afdx import update_afd_secret                            # pylint: disable=unused-import
+from .custom_afdx import create_afd_custom_domain                     # pylint: disable=unused-import
+from .custom_afdx import update_afd_custom_domain                     # pylint: disable=unused-import
