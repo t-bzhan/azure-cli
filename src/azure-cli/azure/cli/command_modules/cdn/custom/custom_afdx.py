@@ -613,7 +613,8 @@ def create_afd_custom_domain(client: AFDCustomDomainsOperations,
                         certificate_type: AfdCertificateType,
                         minimum_tls_version: AfdMinimumTlsVersion, 
                         azure_dns_zone: str=None,
-                        secret: str = None):
+                        secret: str = None,
+                        no_wait: bool = None):
 
     if azure_dns_zone is not None and "/dnszones/" not in azure_dns_zone:
         raise CLIError('azure_dns_zone should be valid azure dns zone id.')
@@ -628,11 +629,9 @@ def create_afd_custom_domain(client: AFDCustomDomainsOperations,
     afd_domain = AFDDomain(host_name=host_name,
                         tls_settings=tls_settings,
                         azure_dns_zone=ResourceReference(id=azure_dns_zone) if azure_dns_zone is not None else None)
- 
-    return client.create(resource_group_name,
-                         profile_name,
-                         custom_domain_name,
-                         afd_domain).result()
+
+    return sdk_no_wait(no_wait, client.create, resource_group_name, profile_name, custom_domain_name, afd_domain)
+
 
 def update_afd_custom_domain(client: AFDCustomDomainsOperations,
                         resource_group_name: str,
