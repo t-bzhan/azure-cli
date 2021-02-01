@@ -99,3 +99,37 @@ class CdnAfdScenarioMixin:
     def afd_endpoint_delete_cmd(self, resource_group_name, endpoint_name, profile_name, checks=None):
         command = f'cdn afd-endpoint delete -g {resource_group_name} --endpoint-name {endpoint_name} --profile-name {profile_name}'
         return self.cmd(command, checks)
+
+    def afd_secret_create_cmd(self, resource_group_name, profile_name, secret_name, secret_source, use_latest_version=True, secret_version=None, checks=None):
+        cmd = f'cdn afd-secret create -g {resource_group_name} --profile-name {profile_name} --secret-name {secret_name} --secret-source {secret_source} --use-latest-version {use_latest_version}'
+
+        if secret_version:
+            cmd += f' --secret-version={secret_version}'
+
+        return self.cmd(cmd, checks)
+
+    def afd_secret_list_cmd(self, resource_group_name, profile_name, checks=None, expect_failure=False):
+        command = f'cdn afd-secret list -g {resource_group_name} --profile-name {profile_name}'
+        return self.cmd(command, checks, expect_failure=expect_failure)
+
+    def afd_secret_delete_cmd(self, resource_group_name, profile_name, secret_name, checks=None):
+        command = f'cdn afd-secret delete -g {resource_group_name} --secret-name {secret_name} --profile-name {profile_name}'
+        return self.cmd(command, checks)
+        
+    def afd_custom_domain_create_cmd(self, resource_group_name, profile_name, custom_domain_name, host_name, certificate_type, minimum_tls_version, azure_dns_zone=None, secret=None, checks=None):
+        cmd = f'cdn afd-custom-domain create -g {resource_group_name} --profile-name {profile_name} --custom-domain-name {custom_domain_name} --host-name {host_name} --certificate-type {certificate_type} --minimum-tls-version {minimum_tls_version}'
+
+        if azure_dns_zone:
+            cmd += f' --azure-dns-zone={azure_dns_zone}'
+        if secret:
+            cmd += f' --secret={secret}'
+
+        return self.cmd(cmd, checks)
+
+    def afd_custom_domain_list_cmd(self, resource_group_name, profile_name, checks=None, expect_failure=False):
+        command = f'cdn afd-custom-domain list -g {resource_group_name} --profile-name {profile_name}'
+        return self.cmd(command, checks, expect_failure=expect_failure)
+
+    def afd_custom_domain_delete_cmd(self, resource_group_name, profile_name, custom_domain_name, checks=None):
+        command = f'cdn afd-custom-domain delete -g {resource_group_name} --custom-domain-name {custom_domain_name} --profile-name {profile_name}'
+        return self.cmd(command, checks)
