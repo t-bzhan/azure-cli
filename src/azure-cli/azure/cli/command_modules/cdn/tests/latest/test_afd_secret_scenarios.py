@@ -32,6 +32,10 @@ class CdnAfdSecretScenarioTest(CdnAfdScenarioMixin, ScenarioTest):
                                  secret_version,
                                  checks=checks)
 
+        show_checks = [JMESPathCheck('name', secret_name),
+                       JMESPathCheck('provisioningState', 'Succeeded')]
+        self.afd_secret_show_cmd(resource_group, profile_name, secret_name, checks=show_checks)
+
         list_checks = [JMESPathCheck('length(@)', 1),
                        JMESPathCheck('@[0].name', secret_name),
                        JMESPathCheck('@[0].provisioningState', 'Succeeded')]
