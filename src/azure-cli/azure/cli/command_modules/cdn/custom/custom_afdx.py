@@ -12,7 +12,7 @@ from azure.mgmt.cdn.models import (AFDEndpoint, HealthProbeRequestType, EnabledS
                                    AFDOrigin, AFDOriginGroup, SharedPrivateLinkResourceProperties, CompressionSettings, LoadBalancingSettingsParameters,
                                    SecurityPolicyWebApplicationFirewallParameters, SecurityPolicyWebApplicationFirewallAssociation,
                                    CustomerCertificateParameters, AFDDomain, AFDDomainHttpsParameters, AfdCertificateType, AfdMinimumTlsVersion,
-                                   AFDEndpointUpdateParameters)
+                                   AFDEndpointUpdateParameters, MatchProcessingBehavior)
 
 from azure.mgmt.cdn.operations import (OriginsOperations, AFDOriginGroupsOperations, AFDOriginsOperations, SecretsOperations, AFDEndpointsOperations,
                                        RoutesOperations, RuleSetsOperations, RulesOperations, SecurityPoliciesOperations, AFDCustomDomainsOperations)
@@ -410,7 +410,7 @@ def create_afd_rule(client: RulesOperations, resource_group_name, profile_name, 
              header_name=None, header_value=None, query_string_behavior=None, query_parameters=None,
              redirect_type=None, redirect_protocol=None, custom_hostname=None, custom_path=None,
              custom_querystring=None, custom_fragment=None, source_pattern=None,
-             destination=None, preserve_unmatched_path=None):
+             destination=None, preserve_unmatched_path=None, match_processing_behavior : MatchProcessingBehavior = None):
     from azure.mgmt.cdn.models import Rule
     from .custom import create_condition
     from .custom import create_action
@@ -432,7 +432,8 @@ def create_afd_rule(client: RulesOperations, resource_group_name, profile_name, 
         name=rule_name,
         order=order,
         conditions=conditions,
-        actions=actions
+        actions=actions,
+        match_processing_behavior = match_processing_behavior
     )
 
     return client.create(resource_group_name,

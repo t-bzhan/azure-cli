@@ -55,10 +55,41 @@ class CdnAfdScenarioMixin:
         command = f'cdn afd-endpoint purge -g {resource_group_name} --endpoint-name {endpoint_name} --profile-name {profile_name} --content-paths {" ".join(content_paths)}'
         return self.cmd(command, checks)
 
-    def afd_rule_add_cmd(self, resource_group_name, rule_set_name, rule_name, profile_name, checks=None):
-        command = f'az cdn afd-rule add -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name} --rule-name {rule_name}\
-               --match-variable RemoteAddress --operator GeoMatch --match-values "TH"\
-               --action-name CacheExpiration --cache-behavior BypassCache'
+    def afd_rule_set_add_cmd(self, resource_group_name, rule_set_name, profile_name, checks=None):
+        command = f'az cdn afd-rule-set create -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name}'
+
+        return self.cmd(command, checks)
+
+    def afd_rule_set_delete_cmd(self, resource_group_name, rule_set_name, profile_name, checks=None):
+        command = f'az cdn afd-rule-set delete -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name} --yes'
+
+        return self.cmd(command, checks)
+
+    def afd_rule_set_list_cmd(self, resource_group_name, profile_name, checks=None, expect_failure=False):
+        command = f'az cdn afd-rule-set list -g {resource_group_name} --profile-name {profile_name}'
+
+        return self.cmd(command, checks, expect_failure=expect_failure)
+
+    def afd_rule_set_show_cmd(self, resource_group_name, rule_set_name, profile_name, checks=None, expect_failure=False):
+        command = f'az cdn afd-rule-set show -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name}'
+
+        return self.cmd(command, checks, expect_failure=expect_failure)
+
+    def afd_rule_list_cmd(self, resource_group_name, rule_set_name,  profile_name, checks=None, expect_failure=False):
+        command = f'az cdn afd-rule list -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name}'
+
+        return self.cmd(command, checks, expect_failure=expect_failure)
+
+    def afd_rule_show_cmd(self, resource_group_name, rule_set_name, rule_name, profile_name, checks=None):
+        command = f'az cdn afd-rule show -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name} --rule-name {rule_set_name}'
+
+        return self.cmd(command, checks)
+
+    def afd_rule_add_cmd(self, resource_group_name, rule_set_name, rule_name, profile_name, options=None, checks=None):
+        command = f'az cdn afd-rule create -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name} --rule-name {rule_name}'
+
+        if options:
+            command = command + ' ' + options
 
         return self.cmd(command, checks)
 
@@ -75,7 +106,7 @@ class CdnAfdScenarioMixin:
         return self.cmd(command, checks)
 
     def afd_rule_delete_cmd(self, resource_group_name, rule_set_name, rule_name, profile_name, checks=None, options=None):
-        command = f'cdn afd-rule delete -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name} --rule-name {rule_name}'
+        command = f'cdn afd-rule delete -g {resource_group_name} --rule-set-name {rule_set_name} --profile-name {profile_name} --rule-name {rule_name} --yes'
         if options:
             command = command + ' ' + options
         return self.cmd(command, checks)
