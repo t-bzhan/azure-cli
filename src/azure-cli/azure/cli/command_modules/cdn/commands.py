@@ -277,8 +277,7 @@ def load_command_table(self, _):
 
         g.custom_command('update', 'update_afd_endpoint', client_factory=cf_afd_endpoints)
         g.custom_command('create', 'create_afd_endpoint', client_factory=cf_cdn,
-                         doc_string_source='azure.mgmt.cdn.models#AFDEndpoint',
-                         supports_no_wait=True)
+                         doc_string_source='azure.mgmt.cdn.models#AFDEndpoint')
 
     with self.command_group('cdn afd-origin-group', cdn_afd_origin_group_sdk, is_preview=True) as g:
         g.show_command('show', 'get')
@@ -336,7 +335,8 @@ def load_command_table(self, _):
         g.show_command('show', 'get')
         g.command('delete', 'delete')
         g.command('list', 'list_by_profile')
-        g.custom_command('create', 'create_afd_custom_domain', client_factory=cf_afd_custom_domain)
+        g.custom_command('create', 'create_afd_custom_domain', client_factory=cf_afd_custom_domain,
+                         supports_no_wait=True)
         g.custom_command('update', 'update_afd_custom_domain', client_factory=cf_afd_custom_domain)
 
     with self.command_group('cdn afd-secret', cdn_afd_secret_sdk) as g:
