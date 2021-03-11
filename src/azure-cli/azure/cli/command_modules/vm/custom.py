@@ -720,7 +720,8 @@ def create_vm(cmd, vm_name, resource_group_name, image=None, size='Standard_DS1_
               proximity_placement_group=None, dedicated_host=None, dedicated_host_group=None, aux_subscriptions=None,
               priority=None, max_price=None, eviction_policy=None, enable_agent=None, workspace=None, vmss=None,
               os_disk_encryption_set=None, data_disk_encryption_sets=None, specialized=None,
-              encryption_at_host=None, enable_auto_update=None, patch_mode=None, ssh_key_name=None):
+              encryption_at_host=None, enable_auto_update=None, patch_mode=None, ssh_key_name=None,
+              enable_hotpatching=None):
     from azure.cli.core.commands.client_factory import get_subscription_id
     from azure.cli.core.util import random_string, hash_string
     from azure.cli.core.commands.arm import ArmTemplateBuilder
@@ -892,7 +893,7 @@ def create_vm(cmd, vm_name, resource_group_name, image=None, size='Standard_DS1_
         enable_agent=enable_agent, vmss=vmss, os_disk_encryption_set=os_disk_encryption_set,
         data_disk_encryption_sets=data_disk_encryption_sets, specialized=specialized,
         encryption_at_host=encryption_at_host, dedicated_host_group=dedicated_host_group,
-        enable_auto_update=enable_auto_update, patch_mode=patch_mode)
+        enable_auto_update=enable_auto_update, patch_mode=patch_mode, enable_hotpatching=enable_hotpatching)
 
     vm_resource['dependsOn'] = vm_dependencies
 
@@ -2218,7 +2219,7 @@ def _reset_windows_admin(cmd, vm_instance, resource_group_name, username, passwo
 
     ext = VirtualMachineExtension(location=vm_instance.location,  # pylint: disable=no-member
                                   publisher=publisher,
-                                  virtual_machine_extension_type=_WINDOWS_ACCESS_EXT,
+                                  type_properties_type=_WINDOWS_ACCESS_EXT,
                                   protected_settings={'Password': password},
                                   type_handler_version=version,
                                   settings={'UserName': username},
@@ -2227,9 +2228,8 @@ def _reset_windows_admin(cmd, vm_instance, resource_group_name, username, passwo
     if no_wait:
         return sdk_no_wait(no_wait, client.virtual_machine_extensions.create_or_update,
                            resource_group_name, vm_instance.name, instance_name, ext)
-    poller = client.virtual_machine_extensions.create_or_update(resource_group_name,
-                                                                vm_instance.name,
-                                                                instance_name, ext)
+    poller = client.virtual_machine_extensions.begin_create_or_update(
+        resource_group_name, vm_instance.name, instance_name, ext)
     return ExtensionUpdateLongRunningOperation(cmd.cli_ctx, 'resetting admin', 'done')(poller)
 
 
